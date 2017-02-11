@@ -27,3 +27,8 @@
 *.exe
 *.out
 *.app
+
+#Others
+.clang_complete
+.sublimelinterrc
+.DS_Store
