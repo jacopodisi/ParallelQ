@@ -1,26 +1,28 @@
-#include <Eigen/Dense>
+#include "gridhandler.h"
+#include <list>
 
-using namespace Eigen;
 
-struct gridstruct {
-		int type = 0;
-		bool check = false;
-		int mark = 0;
+class Environment {
+public:
+	Environment(int grid_size, int grid_id);
+
+	position reset();
+
+	position reset(int init_row, int end_row, int init_col, int end_col);
+	
+	observation step(Actions a);
+
+	position getCurrState();
+
+	std::shared_ptr<MatrixXi> getGrid();
+
+	void printGridEnv();
+	
+	virtual ~Environment(){};
+
+private:
+	
+	std::shared_ptr<MatrixXi> grid;
+	
+	position curr_state;
 };
-
-struct pos {
-		int row;
-		int col;
-};
-
-typedef Eigen::Matrix<gridstruct, Eigen::Dynamic, Eigen::Dynamic> GridMatrix;
-typedef std::shared_ptr<GridMatrix> GridMatrix_pointer;
-
-void gridcheck(GridMatrix_pointer grid, int row, int col);
-
-// +1 for goal
-// -1 for wall
-// 0 nothing
-GridMatrix_pointer gridGenerator(int gridsize, int wallsize);
-
-void printGrid(GridMatrix_pointer grid);

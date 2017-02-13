@@ -5,7 +5,7 @@ CXXFLAGS = -std=c++11 -Wall -I$(INCDIR) -I$(INCDIREIGEN)
 SRCDIR	 = ./src
 INCDIR	 = ./include
 INCDIREIGEN = /usr/local/include/eigen3
-SOURCES	 = $(SRCDIR)/main.cpp $(SRCDIR)/environment.cpp
+SOURCES	 = $(SRCDIR)/main.cpp $(SRCDIR)/environment.cpp $(SRCDIR)/gridhandler.cpp
 OBJECTS	 = $(SOURCES:.cpp=.o)
 
 all:	CXXFLAGS += -O3

@@ -1,5 +1,5 @@
-for i in {1..4}
+for i in {}
 do
   ./myprog
-  sleep 3s
+  sleep 1s
 done
