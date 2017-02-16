@@ -78,17 +78,13 @@ GridMatrix_pointer gridGenerator(int gridsize, int wallsize, bool save)
 	{
 		ok = true;
 		grid = std::make_shared<GridMatrix>(gridsize,gridsize);
-		std::cout << "griglia fatta " + std::to_string(grid->rows()) + std::to_string(grid->cols()) << '\n';
 		for (int w = 0; w < wallsize; w++)
 		{
 			(*grid)(rand() % rows, rand() % cols).type = -1;
 		}
-		std::cout << "muri fatta " << '\n';
 		(*grid)(0,cols-1).type = 1;
 		(*grid)(rows-1,0).type = 1;
-		std::cout << "goal fatta " << '\n';
 		gridcheck(grid);
-		std::cout << "fine grid check " << '\n';
 		for (int c = 0; (c < cols) && ok; c++)
 		{
 			for (int r = 0; (r < rows) && ok; r++)
@@ -96,9 +92,7 @@ GridMatrix_pointer gridGenerator(int gridsize, int wallsize, bool save)
 				if (!(*grid)(r,c).check && ((*grid)(r,c).type!=-1)) ok = false;
 			}
 		}
-		std::cout << "fine check " << '\n';
 		if (ok) break;
-		std::cout << "griglia fatta male... rifacciamo " << '\n';
     } while (true);
 	std::string fn = "grid_matrix_list_size" + std::to_string(gridsize) + ".bin";
 	if (save) saveGrid(grid);

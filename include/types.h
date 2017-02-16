@@ -6,7 +6,7 @@ struct position {
 };
 
 struct observation {
-	position next_state;
+	int next_state;
 	double reward;
 	bool done;
 };
@@ -17,4 +17,10 @@ enum Actions : uint8_t
   down = 1, // 1
   left = 2, // 2
   right = 3 // 3
+};
+
+struct Q_value
+{
+	int value = 0;
+	int cache = 0;
 };

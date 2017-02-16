@@ -1,4 +1,4 @@
-#include "environment.h"
+#include "dynamicprog.h"
 #include <iostream>
 
 int main(int argc, char* argv[])
@@ -15,11 +15,9 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	Environment env(14, 2);
+	Environment env (14, 0);
 	env.printGridEnv();
-	env.reset(0,7,0,4);
-	env.printGridEnv();
-	Actions bo = static_cast<Actions> (0);
-	env.step(bo);
-	env.printGridEnv();
+	std::shared_ptr<Eigen::VectorXd> V;
+	V = Dynamicprog::valueIteration(env, 0.8);
+	std::cout << (*V) << '\n';
 }
