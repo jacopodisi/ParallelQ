@@ -1,23 +1,24 @@
-#include "dynamicprog.h"
-#include <iostream>
+#include "agent.h"
 
 int main(int argc, char* argv[])
 {
-	if (argc>2)
-	{
-		int gridsize = atof(argv[1]);
-		int wallsize = gridsize*gridsize*0.312;
-		int numgrid = atof(argv[2]);
-		for (int i=2; i<numgrid; i++)
-		{
-			GridMatrix_pointer grid = gridGenerator(gridsize, wallsize);
-			printGrid(grid);
-		}
-	}
-
-	Environment env (14, 0);
+	srand(time(0));
+	if (argc < 2) {std::cin >> argv[1];}
+	Environment env (14, atof(argv[1]));
 	env.printGridEnv();
-	std::shared_ptr<Eigen::VectorXd> V;
-	V = Dynamicprog::valueIteration(env, 0.8);
-	std::cout << (*V) << '\n';
+	std::shared_ptr<Eigen::VectorXd> vin = env.readValueFunction();
+	std::cout << '\n';
+	std::cout << '\n';
+	std::cout << (*vin) << '\n';
+	Agent agent(env);
+	agent.learn(-1, 100);
+	std::cout << '\n';
+	std::cout << '\n';
+	std::cout << (*agent.getQ()) << '\n';
+	std::string qfile = "default";
+	agent.saveQ(qfile);
+	std::shared_ptr<Eigen::MatrixXd> qin = agent.readQ(qfile);
+	std::cout << '\n';
+	std::cout << '\n';
+	std::cout << (*qin) << '\n';
 }

@@ -1,5 +1,9 @@
-#include <Eigen/Dense>
 #include "types.h"
+#include <Eigen/Dense>
+#include <thread>
+#include <chrono>
+#include <list>
+#include <fstream>
 
 using namespace Eigen;
 
@@ -37,10 +41,17 @@ int listSize(int size);
 function used to save the grid in a file referenced to the
 size of the grid.
 */
-void saveGrid(GridMatrix_pointer grid);
+void saveGrid(GridMatrix_pointer grid, int id);
 
 /*
 function used to open a grid given the id of the grid and its size
 returning a pointer to the given grid
 */
 std::shared_ptr<MatrixXi> openGrid(int size, int id);
+
+/*
+check if a file exists
+*/
+bool fileExists(const std::string& filename);
+
+

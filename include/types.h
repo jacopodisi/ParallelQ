@@ -1,4 +1,9 @@
 #include <cstdint>
+#include <iostream>
+#include <sys/stat.h>
+
+#define debugDynamic false
+#define debugAgent false
 
 struct position {
 	int row;

@@ -1,10 +1,4 @@
 #include "gridhandler.h"
-#include <iostream>
-#include <thread>
-#include <chrono>
-#include <list>
-#include <fstream>
-#include <cstdio>
 
 
 void gridcheck(GridMatrix_pointer grid, int init_row = 0, int init_col = 0)
@@ -73,17 +67,20 @@ GridMatrix_pointer gridGenerator(int gridsize, int wallsize, bool save)
 	int cols = gridsize;
 	int rows = gridsize;
 	bool ok;
-	srand(time(0));
 	do
 	{
 		ok = true;
+		int row, col;
 		grid = std::make_shared<GridMatrix>(gridsize,gridsize);
-		for (int w = 0; w < wallsize; w++)
-		{
-			(*grid)(rand() % rows, rand() % cols).type = -1;
-		}
 		(*grid)(0,cols-1).type = 1;
 		(*grid)(rows-1,0).type = 1;
+		for (int w = 0; w < wallsize; w++)
+		{
+			row = rand() % rows;
+			col = rand() % cols;
+			if ((*grid)(row, col).type == 0) (*grid)(row, col).type = -1;
+			else w--;
+		}
 		gridcheck(grid);
 		for (int c = 0; (c < cols) && ok; c++)
 		{
@@ -94,8 +91,17 @@ GridMatrix_pointer gridGenerator(int gridsize, int wallsize, bool save)
 		}
 		if (ok) break;
     } while (true);
-	std::string fn = "grid_matrix_list_size" + std::to_string(gridsize) + ".bin";
-	if (save) saveGrid(grid);
+    int id = 0;
+	if (save)
+	{
+		while(true)
+	    {
+	    	std::string fn = "grid/grid_matrix_size" + std::to_string(gridsize) + "id" + std::to_string(id) + ".bin";
+	    	if(!fileExists(fn)) break;
+	    	id++;
+	    }
+		saveGrid(grid, id);
+	}
 
 	return grid;
 }
@@ -108,7 +114,7 @@ void printGrid(GridMatrix_pointer grid)
 	{
 		if (row==0)
 		{
-			std::cout << std::string("-", cols) << '\n';  
+			std::cout << '\n';  
 		}
 		std::cout << "|";
 		for (int col = 0; col < cols; col++)
@@ -121,7 +127,7 @@ void printGrid(GridMatrix_pointer grid)
 		std::cout << '\n';
 		if (row==rows-1)
 		{
-			std::cout << std::string("-", cols) << '\n';  
+			std::cout << '\n';  
 		}
 	}
 }
@@ -153,21 +159,12 @@ void printGrid(std::shared_ptr<MatrixXi> grid, int agent_row, int agent_col)
 	}
 }
 
-int listSize(int size)
-{
-	std::string fn = "grid_matrix_list_size" + std::to_string(size) + ".bin";
-	FILE *fs = fopen(fn.c_str(), "ab");
-	if(!fs) std::perror("File opening failed");
-	if(fseek(fs, 0, SEEK_END)!=0) std::perror("File seek failed");
-	return ftell(fs)/(sizeof(int) * size * size);
-}
-
-void saveGrid(GridMatrix_pointer grid)
+void saveGrid(GridMatrix_pointer grid, int id)
 {
 	int size = grid->cols();
-	std::string fn = "grid_matrix_list_size" + std::to_string(size) + ".bin";
+	std::string fn = "grid/grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id) + ".bin";
 	int output[size];
-	FILE *fs = fopen(fn.c_str(), "ab");
+	FILE *fs = fopen(fn.c_str(), "wb");
 	if(!fs) std::perror("File opening failed");
 	for (size_t i = 0; i < size; i++)
 	{
@@ -188,14 +185,14 @@ void saveGrid(GridMatrix_pointer grid)
 std::shared_ptr<MatrixXi> openGrid(int size, int id)
 {
 	std::shared_ptr<MatrixXi> grid = std::make_shared<MatrixXi>(size,size);
-	std::string fn = "grid_matrix_list_size" + std::to_string(size) + ".bin";
+	std::string fn = "grid/grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id) + ".bin";
+	if (!fileExists(fn)) {std::cout << "file does not exist: " + fn << '\n'; std::perror(fn.c_str());}
 	FILE *fs = fopen(fn.c_str(), "rb");
 	if(!fs)
 	{
 		std::cout << "File opening failed: ";
 		std::perror(fn.c_str());
 	}
-	if(fseek(fs, sizeof(int) * size * size * id, SEEK_SET)!=0) std::perror("File seek failed");
 	for (int i = 0; i < size; i++)
 	{
 		for (int j = 0; j < size; ++j)
@@ -207,3 +204,17 @@ std::shared_ptr<MatrixXi> openGrid(int size, int id)
 	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
 	return grid;
 }
+
+bool fileExists(const std::string& filename)
+{
+    struct stat buf;
+    if (stat(filename.c_str(), &buf) != -1)
+    {
+        return true;
+    }
+    return false;
+};
+
+
+
+

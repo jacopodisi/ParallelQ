@@ -1,22 +1,39 @@
 #include "environment.h"
-#include <iostream>
-#include <thread>
 
 Environment::Environment()
 {
 	std::shared_ptr<MatrixXi> param_grid = std::make_shared<MatrixXi>(0,0);
 	grid = param_grid;
-	srand(time(0));
+	id = 0;
 }
 
 Environment::Environment(int grid_size, int grid_id)
 {
-	int l_size = listSize(grid_size);
+	int max_size;
+	for (max_size = 14; ; ++max_size)
+	{
+		std::string fn = "grid/grid_matrix_size" + std::to_string(max_size) + "id0.bin";
+		if (!fileExists(fn)) {max_size--; break;}
+	}
 	while (true)
 	{
-		if (!(grid_id >= l_size)) break;
-		std::cout << "incorrect grid id for grid size " + std::to_string(grid_size) << '\n';
-		std::cout << "specify a new id value (MAX id: " + std::to_string(l_size - 1) + "): ";
+		if(grid_size<=max_size) break;
+	    std::cout << "incorrect grid size \n";
+		std::cout << "specify a new size value (MAX size: " + std::to_string(max_size) + "): ";
+		std::cin >> grid_size;
+		std::cout << '\n';
+	}
+	int max_id;
+	for (max_id = 0; ; ++max_id)
+	{
+		std::string fn = "grid/grid_matrix_size" + std::to_string(grid_size) + "id" + std::to_string(max_id) + ".bin";
+		if (!fileExists(fn)) {max_id--; break;}
+	}
+	while (true)
+	{
+		if(grid_id<=max_id) break;
+	    std::cout << "incorrect grid id \n";
+		std::cout << "specify a new id value (MAX id: " + std::to_string(max_id) + "): ";
 		std::cin >> grid_id;
 		std::cout << '\n';
 	}
@@ -39,7 +56,6 @@ Environment::Environment(int grid_size, int grid_id)
 			}
 		}
 	}
-
 	std::shared_ptr<PosVector> param_list = std::make_shared<PosVector>(nstate);
 	int s = 0;
 	for (int i = 0; i < grid->rows(); ++i)
@@ -55,14 +71,12 @@ Environment::Environment(int grid_size, int grid_id)
 			}
 		}
 	}
-
 	positions_list = pos_list;
 	states_list = param_list;
-
-	srand(time(0));
+	id = grid_id;
 }
 
-position Environment::reset()
+int Environment::reset()
 {
 	int size = grid->cols();
 	position pos;
@@ -73,10 +87,10 @@ position Environment::reset()
 	    if ((*grid)(pos.row, pos.col) == 0) break;
 	}
 	curr_state = pos;
-	return curr_state;
+	return 	(*positions_list)[std::make_pair(curr_state.row, curr_state.col)];
 }
 
-position Environment::reset(int init_row, int end_row, int init_col, int end_col)
+int Environment::reset(int init_row, int end_row, int init_col, int end_col)
 {
 	position pos;
 	while(true) 
@@ -86,7 +100,7 @@ position Environment::reset(int init_row, int end_row, int init_col, int end_col
 	    if ((*grid)(pos.row, pos.col) == 0) break;
 	}
 	curr_state = pos;
-	return curr_state;
+	return 	(*positions_list)[std::make_pair(curr_state.row, curr_state.col)];
 }
 
 observation Environment::step(Actions a)
@@ -101,8 +115,8 @@ observation Environment::step(Actions a)
 		case left: pos.col--; break;
 		case right: pos.col++; break;
 	}
-	if (0 <= pos.row < grid->rows() &&
-		0 <= pos.col < grid->cols())
+	if (pos.row >= 0 && pos.row < grid->rows() &&
+		pos.col >= 0 && pos.col < grid->cols())
 	{
 		//inside the grid
 		if ((*grid)(pos.row, pos.col) != -1)
@@ -111,14 +125,12 @@ observation Environment::step(Actions a)
 		if ((*grid)(pos.row, pos.col) == 1)
 		{
 			//next state == goal
-
-			ob.next_state = (*positions_list)[std::make_pair(curr_state.row, curr_state.col)];
-			ob.reward = 1000;
+			ob.next_state = -1;
+			ob.reward = 100;
 			ob.done = true;
 			return ob;
 		}
 	}
-
 	ob.next_state = (*positions_list)[std::make_pair(curr_state.row, curr_state.col)];;
 	ob.reward = 0;
 	ob.done = false;
@@ -127,7 +139,6 @@ observation Environment::step(Actions a)
 
 observation Environment::prediction(int state, Actions a)
 {
-
 	observation ob;
 	position n_state, c_state;
 	n_state = (*states_list)(state);
@@ -149,13 +160,12 @@ observation Environment::prediction(int state, Actions a)
 		if ((*grid)(n_state.row, n_state.col) == 1)
 		{
 			//next state == goal
-			ob.next_state = (*positions_list)[std::make_pair(c_state.row, c_state.col)];;
-			ob.reward = 1000;
+			ob.next_state = -1;
+			ob.reward = 100;
 			ob.done = true;
 			return ob;
 		}
 	}
-
 	ob.next_state = (*positions_list)[std::make_pair(c_state.row, c_state.col)];;
 	ob.reward = 0;
 	ob.done = false;
@@ -188,10 +198,53 @@ std::shared_ptr<std::map<std::pair<int, int>, int>> Environment::getPositionsLis
 	return positions_list;
 }
 
+void Environment::saveValueFunction(std::shared_ptr<Eigen::VectorXd> value_function)
+{
+	int gridsize = grid->rows();
+	int size = value_function->rows();
+	std::string fn = "grid/value_function_grid_size" + std::to_string(gridsize) + "id" + std::to_string(id) + ".bin";
+	double output[size];
+	FILE *fs = fopen(fn.c_str(), "wb");
+	if(!fs) std::perror("File opening failed");
+	for (size_t i = 0; i < size; i++) output[i] = (*value_function)(i);
+	std::fwrite(output, sizeof(double), size, fs);
+	if(std::fflush(fs) != 0)
+	{
+		std::cout << "Error in flushing file" << '\n';
+		return;
+	}
+	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+}
+
+std::shared_ptr<Eigen::VectorXd> Environment::readValueFunction()
+{
+	std::string fn = "grid/value_function_grid_size" + std::to_string(grid->rows()) + "id" + std::to_string(id) + ".bin";
+	if (!fileExists(fn)) {std::cout << "file does not exist: " + fn << '\n'; std::perror(fn.c_str());}
+	FILE *fs = fopen(fn.c_str(), "rb");
+	if(!fs)
+	{
+		std::cout << "File opening failed: ";
+		std::perror(fn.c_str());
+	}
+	std::fseek(fs, 0, SEEK_END);
+    std::size_t size = std::ftell(fs)/sizeof(double);
+    std::cout << std::to_string(size) << '\n';
+    std::shared_ptr<Eigen::VectorXd> V = std::make_shared<Eigen::VectorXd>(size);
+    std::fseek(fs, 0, SEEK_SET);
+	for (int i = 0; i < size; i++)
+	{
+		fread(&(*V)(i), sizeof(double), 1, fs);
+	}
+	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+	return V;
+}
+
+
 void Environment::printGridEnv()
 {
 	printGrid(grid, curr_state.row, curr_state.col);
 }
+
 
 
 
