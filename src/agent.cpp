@@ -1,20 +1,21 @@
 #include "agent.h"
 
+std::shared_ptr<Eigen::MatrixXd> Agent::global_q = std::make_shared<Eigen::MatrixXd>();
+
 Agent::Agent(Environment param_env)
 {
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
-	global_q = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
-	global_q->setZero();
+	global_q->setZero(states_list->rows(), env.getNumActions());
 	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 	q_function->setZero();
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
 	q_cache->setZero();
 	init_row = 0;
-	end_row = 0;
+	end_row = env.getGrid()->rows() - 1;
 	init_col = 0;
-	end_col = 0;
+	end_col = env.getGrid()->cols() - 1;
 	cache_size = 0;
 }
 
@@ -23,8 +24,7 @@ Agent::Agent(Environment param_env, int param_init_row, int param_end_row, int p
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
-	global_q = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
-	global_q->setZero();
+	global_q->setZero(states_list->rows(), env.getNumActions());
 	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 	q_function->setZero();
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
@@ -74,6 +74,7 @@ void Agent::learn(double eps, int num_episodes, double discount_factor, double a
 	for (int episode = 0; episode < num_episodes; episode++)
 	{
 		if (eps < 0) epsilon = pow(1-episode/num_episodes, 2);
+		if (debugAgent) std::cout << "before reset\n";
 		int state = env.reset(init_row, end_row, init_col, end_col);
 		if (debugAgent) std::cout << std::to_string(state);
 		//calculate the action to be performed 
@@ -207,11 +208,6 @@ std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
 
 	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
 	return Q;
-}
-
-static void parallelAgents()
-{
-
 }
 
 
