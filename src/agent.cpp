@@ -5,10 +5,35 @@ Agent::Agent(Environment param_env)
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
+	global_q = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
+	global_q->setZero();
 	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 	q_function->setZero();
-	q_cache = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
+	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
 	q_cache->setZero();
+	init_row = 0;
+	end_row = 0;
+	init_col = 0;
+	end_col = 0;
+	cache_size = 0;
+}
+
+Agent::Agent(Environment param_env, int param_init_row, int param_end_row, int param_init_col, int param_end_col, int param_cache_size)
+{
+	env = param_env;
+	states_list = env.getStatesList();
+	num_actions = env.getNumActions();
+	global_q = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
+	global_q->setZero();
+	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
+	q_function->setZero();
+	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
+	q_cache->setZero();
+	init_row = param_init_row;
+	end_row = param_end_row;
+	init_col = param_init_col;
+	end_col = param_end_col;
+	cache_size = param_cache_size;
 }
 
 int Agent::epsilonGreedyPolicy(int state, double epsilon)
@@ -41,27 +66,54 @@ int Agent::epsilonGreedyPolicy(int state, double epsilon)
 
 void Agent::learn(double eps, int num_episodes, double discount_factor, double alpha, int MSE)
 {
+	bool outside = false;
 	double epsilon = eps;
+	std::chrono::steady_clock::time_point start;
+	std::chrono::steady_clock::time_point end;
+	start = std::chrono::steady_clock::now();
 	for (int episode = 0; episode < num_episodes; episode++)
 	{
 		if (eps < 0) epsilon = pow(1-episode/num_episodes, 2);
-		if ((episode%1000) == 0) 
-			std::cout << "Episode " + std::to_string(episode) + "/" + std::to_string(num_episodes);
-		int state = env.reset();
+		int state = env.reset(init_row, end_row, init_col, end_col);
 		if (debugAgent) std::cout << std::to_string(state);
 		//calculate the action to be performed 
 		//based on the e-greedy policy derived from the Q function
 		int action = epsilonGreedyPolicy(state, epsilon);
+		//first condition
 		for (int i = 0; i < MSE; ++i)
 		{
 			if (debugAgent) std::cout << std::to_string(state) << ' ';
 		    observation ob = env.step(static_cast<Actions>(action));
 			if (debugAgent) std::cout << std::to_string(static_cast<Actions>(action)) << ' ';
+			position pos = env.getCurrState();
+			if (!(pos.row >= init_row &&
+					pos.row <= end_row &&
+					pos.col >= init_col &&
+					pos.col <= end_col))
+			{
+				if ((*q_cache)(ob.next_state) == 0)
+				{
+					//TODO mutex
+					(*q_function).row(ob.next_state) = (*global_q).row(ob.next_state);
+					(*q_cache)(ob.next_state) = cache_size;
+				} else 
+				{
+					(*q_cache)(ob.next_state)--;
+				}
+				outside = true;
+			}
+			//second condition
 		    if (ob.done)
 		    {
 				if (debugAgent) std::cout << std::to_string(state);
 		    	double delta = ob.reward - (*q_function)(state, action);
 		    	(*q_function)(state, action) += alpha * delta;
+		    	if ((start-std::chrono::steady_clock::now()) >= std::chrono::microseconds(8))
+		    	{
+		    		//TODO mutex
+		    		(*global_q).row(state) = (*q_function).row(state);
+		    		start = std::chrono::steady_clock::now();
+		    	}
 		    	break;
 		    }
 		    int next_action = epsilonGreedyPolicy(ob.next_state, epsilon);
@@ -69,6 +121,14 @@ void Agent::learn(double eps, int num_episodes, double discount_factor, double a
 			//from the deterministic policy, following the e-greedy one
 		    double delta = ob.reward + discount_factor * (q_function->row(ob.next_state)).maxCoeff() - (*q_function)(state, action);
 		    (*q_function)(state, action) += alpha * delta;
+		    //third condition
+		    if ((start-std::chrono::steady_clock::now()) >= std::chrono::microseconds(8))
+	    	{
+	    		//TODO mutex
+	    		(*global_q).row(state) = (*q_function).row(state);
+	    		start = std::chrono::steady_clock::now();
+	    	}
+		    if (outside) break;
 		    state = ob.next_state;
 		    action = next_action;
 		    if (debugAgent) std::cout << "fs" << '\n';
@@ -149,6 +209,10 @@ std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
 	return Q;
 }
 
+static void parallelAgents()
+{
+
+}
 
 
 
