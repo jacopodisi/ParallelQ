@@ -54,6 +54,16 @@ public:
 	@return the value of curr_state as a position variable
 	*/
 	position getCurrState();
+	int getCurrStateNumber()
+	{
+		return (*positions_list)[std::make_pair(curr_state.row, curr_state.col)];
+	};
+	int reset(int init, int end)
+	{
+		int state = init + (rand() % (end - init + 1));
+		curr_state = (*states_list)(state);
+		return 	state;
+	};
 
 	/*
 	@return the pointer to the grid

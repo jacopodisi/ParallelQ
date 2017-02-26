@@ -13,13 +13,12 @@ Agent::Agent(Environment param_env)
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
 	q_cache->setZero();
 	init_row = 0;
-	end_row = env.getGrid()->rows() - 1;
-	init_col = 0;
-	end_col = env.getGrid()->cols() - 1;
+	end_row = env.getStatesList()->rows() - 1;
 	cache_size = 0;
+	pthread_mutex_init(&mutex, NULL);
 }
 
-Agent::Agent(Environment param_env, int param_init_row, int param_end_row, int param_init_col, int param_end_col, int param_cache_size)
+Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, pthread_mutex_t m)
 {
 	env = param_env;
 	states_list = env.getStatesList();
@@ -29,11 +28,10 @@ Agent::Agent(Environment param_env, int param_init_row, int param_end_row, int p
 	q_function->setZero();
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
 	q_cache->setZero();
-	init_row = param_init_row;
-	end_row = param_end_row;
-	init_col = param_init_col;
-	end_col = param_end_col;
+	init_row = param_init;
+	end_row = param_end;
 	cache_size = param_cache_size;
+	mutex = m;
 }
 
 int Agent::epsilonGreedyPolicy(int state, double epsilon)
@@ -64,42 +62,41 @@ int Agent::epsilonGreedyPolicy(int state, double epsilon)
 	return action;
 }
 
-void Agent::learn(double eps, int num_episodes, double discount_factor, double alpha, int MSE)
+void * Agent::learn(void * agent)
 {
+	Agent ag = (*(Agent *)agent);
 	bool outside = false;
-	double epsilon = eps;
+	double epsilon = EPS;
 	std::chrono::steady_clock::time_point start;
 	std::chrono::steady_clock::time_point end;
 	start = std::chrono::steady_clock::now();
-	for (int episode = 0; episode < num_episodes; episode++)
+	for (int episode = 0; episode < NUM_EP; episode++)
 	{
-		if (eps < 0) epsilon = pow(1-episode/num_episodes, 2);
+		outside = false;
+		if (EPS < 0) epsilon = pow(1-episode/NUM_EP, 2);
 		if (debugAgent) std::cout << "before reset\n";
-		int state = env.reset(init_row, end_row, init_col, end_col);
+		int state = ag.env.reset(ag.init_row, ag.end_row);
 		if (debugAgent) std::cout << std::to_string(state);
 		//calculate the action to be performed 
 		//based on the e-greedy policy derived from the Q function
-		int action = epsilonGreedyPolicy(state, epsilon);
+		int action = ag.epsilonGreedyPolicy(state, epsilon);
 		//first condition
 		for (int i = 0; i < MSE; ++i)
 		{
 			if (debugAgent) std::cout << std::to_string(state) << ' ';
-		    observation ob = env.step(static_cast<Actions>(action));
+		    observation ob = ag.env.step(static_cast<Actions>(action));
 			if (debugAgent) std::cout << std::to_string(static_cast<Actions>(action)) << ' ';
-			position pos = env.getCurrState();
-			if (!(pos.row >= init_row &&
-					pos.row <= end_row &&
-					pos.col >= init_col &&
-					pos.col <= end_col))
+			int pos = ag.env.getCurrStateNumber();
+			if (pos<ag.init_row && pos>ag.end_row)
 			{
-				if ((*q_cache)(ob.next_state) == 0)
+				if ((*ag.q_cache)(ob.next_state) == 0)
 				{
 					//TODO mutex
-					(*q_function).row(ob.next_state) = (*global_q).row(ob.next_state);
-					(*q_cache)(ob.next_state) = cache_size;
+					(*ag.q_function).row(ob.next_state) = (*global_q).row(ob.next_state);
+					(*ag.q_cache)(ob.next_state) = ag.cache_size;
 				} else 
 				{
-					(*q_cache)(ob.next_state)--;
+					(*ag.q_cache)(ob.next_state)--;
 				}
 				outside = true;
 			}
@@ -107,26 +104,26 @@ void Agent::learn(double eps, int num_episodes, double discount_factor, double a
 		    if (ob.done)
 		    {
 				if (debugAgent) std::cout << std::to_string(state);
-		    	double delta = ob.reward - (*q_function)(state, action);
-		    	(*q_function)(state, action) += alpha * delta;
-		    	if ((start-std::chrono::steady_clock::now()) >= std::chrono::microseconds(8))
+		    	double delta = ob.reward - (*ag.q_function)(state, action);
+		    	(*ag.q_function)(state, action) += ALPHA * delta;
+		    	if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
 		    	{
 		    		//TODO mutex
-		    		(*global_q).row(state) = (*q_function).row(state);
+		    		(*global_q).row(state) = (*ag.q_function).row(state);
 		    		start = std::chrono::steady_clock::now();
 		    	}
 		    	break;
 		    }
-		    int next_action = epsilonGreedyPolicy(ob.next_state, epsilon);
+		    int next_action = ag.epsilonGreedyPolicy(ob.next_state, epsilon);
 			//improve the Q function for the current (state, action)
 			//from the deterministic policy, following the e-greedy one
-		    double delta = ob.reward + discount_factor * (q_function->row(ob.next_state)).maxCoeff() - (*q_function)(state, action);
-		    (*q_function)(state, action) += alpha * delta;
+		    double delta = ob.reward + DISCOUNT * (ag.q_function->row(ob.next_state)).maxCoeff() - (*ag.q_function)(state, action);
+		    (*ag.q_function)(state, action) += ALPHA * delta;
 		    //third condition
-		    if ((start-std::chrono::steady_clock::now()) >= std::chrono::microseconds(8))
+		    if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
 	    	{
 	    		//TODO mutex
-	    		(*global_q).row(state) = (*q_function).row(state);
+	    		(*global_q).row(state) = (*ag.q_function).row(state);
 	    		start = std::chrono::steady_clock::now();
 	    	}
 		    if (outside) break;
@@ -135,13 +132,18 @@ void Agent::learn(double eps, int num_episodes, double discount_factor, double a
 		    if (debugAgent) std::cout << "fs" << '\n';
 		}
 		if (debugAgent) std::cout << '\n';
-		if (debugAgent) std::cout << (*q_function) << '\n';
+		if (debugAgent) std::cout << (*ag.q_function) << '\n';
 	}
+	return (void *) &(*ag.q_function);
 }
 
 std::shared_ptr<Eigen::MatrixXd> Agent::getQ()
 {
 	return q_function;
+}
+std::shared_ptr<Eigen::MatrixXd> Agent::getGlobalQ()
+{
+	return global_q;
 }
 
 void Agent::saveQ(std::string fopt)
