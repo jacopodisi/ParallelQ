@@ -1,13 +1,21 @@
 #include "agent.h"
 
+#define EPS 0.1
+#define NUM_EP 32000
+#define DISCOUNT 0.95
+#define ALPHA 1
+#define MSE 10000
+#define SHARED_MEM false
+
 std::shared_ptr<Eigen::MatrixXd> Agent::global_q = std::make_shared<Eigen::MatrixXd>();
 
 Agent::Agent(Environment param_env)
 {
+	parallel = false;
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
-	global_q->setZero(states_list->rows(), env.getNumActions());
+	//global_q->setZero(states_list->rows(), env.getNumActions());
 	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 	q_function->setZero();
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
@@ -20,12 +28,19 @@ Agent::Agent(Environment param_env)
 
 Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, pthread_mutex_t m)
 {
+	parallel = true;
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
 	global_q->setZero(states_list->rows(), env.getNumActions());
-	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
-	q_function->setZero();
+	if(SHARED_MEM)
+	{
+		q_function = global_q;
+	} else
+	{
+		q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
+		q_function->setZero();
+	}
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
 	q_cache->setZero();
 	init_row = param_init;
@@ -38,27 +53,21 @@ int Agent::epsilonGreedyPolicy(int state, double epsilon)
 {
 	std::shared_ptr<Eigen::VectorXd> policy = std::make_shared<Eigen::VectorXd>(num_actions);
 	(*policy).fill(epsilon / num_actions);
-	if (debugAgent) std::cout << (*policy).transpose() << " ";
 	int max = 0;
 	for (int i = 1; i < num_actions; ++i)
 	{
 		if ((*q_function)(state, i) > (*q_function)(state, max))
 			max = i;
 	}
-	if (debugAgent) std::cout << std::to_string(max) << " ";
 	(*policy)(max) += 1 - epsilon;
 	double val = ((double) rand() / RAND_MAX);
-	if (debugAgent) std::cout << "val: " + std::to_string(val) + " ";
-	if (debugAgent) std::cout << (*policy).transpose() << " ";
 	double prob = 0;
 	int action = 0;
 	for(int i = 0; i < num_actions; i++)
 	{
 		prob += (*policy)(i);
-		if (debugAgent) std::cout << std::to_string(prob) + " ";
 		if (val < prob) {action = i; break;}
 	}
-	if (debugAgent) std::cout << std::to_string(action) + " ";
 	return action;
 }
 
@@ -68,50 +77,53 @@ void * Agent::learn(void * agent)
 	bool outside = false;
 	double epsilon = EPS;
 	std::chrono::steady_clock::time_point start;
-	std::chrono::steady_clock::time_point end;
 	start = std::chrono::steady_clock::now();
 	for (int episode = 0; episode < NUM_EP; episode++)
 	{
 		outside = false;
 		if (EPS < 0) epsilon = pow(1-episode/NUM_EP, 2);
-		if (debugAgent) std::cout << "before reset\n";
 		int state = ag.env.reset(ag.init_row, ag.end_row);
-		if (debugAgent) std::cout << std::to_string(state);
 		//calculate the action to be performed 
 		//based on the e-greedy policy derived from the Q function
 		int action = ag.epsilonGreedyPolicy(state, epsilon);
 		//first condition
 		for (int i = 0; i < MSE; ++i)
 		{
-			if (debugAgent) std::cout << std::to_string(state) << ' ';
 		    observation ob = ag.env.step(static_cast<Actions>(action));
-			if (debugAgent) std::cout << std::to_string(static_cast<Actions>(action)) << ' ';
-			int pos = ag.env.getCurrStateNumber();
-			if (pos<ag.init_row && pos>ag.end_row)
-			{
-				if ((*ag.q_cache)(ob.next_state) == 0)
+		    if (ag.parallel)
+		    {
+				int pos = ag.env.getCurrStateNumber();
+				if (pos<ag.init_row && pos>ag.end_row)
 				{
-					//TODO mutex
-					(*ag.q_function).row(ob.next_state) = (*global_q).row(ob.next_state);
-					(*ag.q_cache)(ob.next_state) = ag.cache_size;
-				} else 
-				{
-					(*ag.q_cache)(ob.next_state)--;
+					if (!SHARED_MEM)
+					{
+						if ((*ag.q_cache)(ob.next_state) == 0)
+						{
+							//TODO mutex
+							(*ag.q_function).row(ob.next_state) = (*global_q).row(ob.next_state);
+							(*ag.q_cache)(ob.next_state) = ag.cache_size;
+						} else 
+						{
+							(*ag.q_cache)(ob.next_state)--;
+						}
+					}
+					outside = true;
 				}
-				outside = true;
 			}
 			//second condition
 		    if (ob.done)
 		    {
-				if (debugAgent) std::cout << std::to_string(state);
 		    	double delta = ob.reward - (*ag.q_function)(state, action);
 		    	(*ag.q_function)(state, action) += ALPHA * delta;
-		    	if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
+		    	if(!SHARED_MEM && ag.parallel)
 		    	{
-		    		//TODO mutex
-		    		(*global_q).row(state) = (*ag.q_function).row(state);
-		    		start = std::chrono::steady_clock::now();
-		    	}
+			    	if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
+			    	{
+			    		//TODO mutex
+			    		(*global_q).row(state) = (*ag.q_function).row(state);
+			    		start = std::chrono::steady_clock::now();
+			    	}
+			    }
 		    	break;
 		    }
 		    int next_action = ag.epsilonGreedyPolicy(ob.next_state, epsilon);
@@ -120,19 +132,19 @@ void * Agent::learn(void * agent)
 		    double delta = ob.reward + DISCOUNT * (ag.q_function->row(ob.next_state)).maxCoeff() - (*ag.q_function)(state, action);
 		    (*ag.q_function)(state, action) += ALPHA * delta;
 		    //third condition
-		    if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
-	    	{
-	    		//TODO mutex
-	    		(*global_q).row(state) = (*ag.q_function).row(state);
-	    		start = std::chrono::steady_clock::now();
-	    	}
+		    if(!SHARED_MEM && ag.parallel)
+		    {
+			    if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
+		    	{
+		    		//TODO mutex
+		    		(*global_q).row(state) = (*ag.q_function).row(state);
+		    		start = std::chrono::steady_clock::now();
+		    	}
+		    }
 		    if (outside) break;
 		    state = ob.next_state;
 		    action = next_action;
-		    if (debugAgent) std::cout << "fs" << '\n';
 		}
-		if (debugAgent) std::cout << '\n';
-		if (debugAgent) std::cout << (*ag.q_function) << '\n';
 	}
 	return (void *) &(*ag.q_function);
 }

@@ -3,12 +3,6 @@
 
 typedef  Eigen::Matrix<Q_value, Eigen::Dynamic, Eigen::Dynamic> QList;
 
-#define EPS 0.1
-#define NUM_EP 32000
-#define DISCOUNT 0.95
-#define ALPHA 1
-#define MSE 10000
-
 class Agent
 {
 public:
@@ -33,4 +27,5 @@ private:
 	std::shared_ptr<Eigen::MatrixXd> q_function;
 	std::shared_ptr<Eigen::VectorXd> q_cache;
 	pthread_mutex_t mutex;
+	bool parallel;
 };

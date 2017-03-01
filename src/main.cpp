@@ -1,4 +1,5 @@
 #include "agent.h"
+#include <vector>
 
 int main(int argc, char* argv[])
 {
@@ -7,12 +8,12 @@ int main(int argc, char* argv[])
 	pthread_attr_t attr;
 	std::shared_ptr<Eigen::MatrixXd> global_q1;
 	std::shared_ptr<Eigen::MatrixXd> global_q2;
+	int cache, size, i;
 
 
 	pthread_t t1;
 	pthread_t t2;
-	void * return_value1;
-	void * return_value2;
+	void * return_value;
 	
 	srand(time(0));
 	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
@@ -21,33 +22,42 @@ int main(int argc, char* argv[])
 	global_q1->setZero();
 	global_q2 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
 	global_q2->setZero();
-	num_threads = 2;
-
+	num_threads = atof(argv[2]);
+	size = env.getStatesList()->rows() / num_threads;
 	pthread_mutex_init(&m,NULL);
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	Agent agent1(env, 0, 66, 8, m);
-	Agent agent2(env, 67, 132, 8, m);
-
-	pthread_create(&t1, &attr, Agent::learn, (void *) &agent1);
-	pthread_create(&t2, &attr, Agent::learn, (void *) &agent2);
-
-	pthread_join(t1, &return_value1);
-	pthread_join(t2, &return_value2);
-	//Agent::learn((void *) &agent1);
-	//Eigen::MatrixXd * ret;
-	//ret = (Eigen::MatrixXd *) return_value2;
-	//pthread_join(t2, &return_value2);
-	std::cout << "first agent" << '\n';
-	std::cout << (*agent1.getQ()) << '\n';
-	std::cout << '\n';
-	std::cout << '\n';
-	std::cout << "second agent" << '\n';
-	std::cout << (*agent2.getQ()) << '\n';
-	std::cout << '\n';
-	std::cout << '\n';
-	std::cout << "agent" << '\n';
-	std::cout << (*agent1.getGlobalQ()) << '\n';
+	switch (num_threads)
+	{
+		case 2: cache = 8;
+	}
+	std::vector<Agent> agents_list;
+	for (i = 0; i < num_threads-1; i++)
+	{
+		Agent a(env, i*size, i*size+size, cache, m);
+		agents_list[i] = (a);
+	}
+	if (num_threads == 1 || num_threads == 0)
+	{
+		Agent a(env);
+		agents_list[i] = (a);
+	} else 
+	{
+		Agent a(env, i*size, env.getStatesList()->rows() - 1, cache, m);
+		agents_list[i] = (a);
+	}
+	pthread_t threads[num_threads];
+	for (i = 0; i < num_threads; i++) {pthread_create(&threads[i], &attr, Agent::learn, (void *) &agents_list[i]);}
+	for (i = 0; i < num_threads; i++) {pthread_join(threads[i], &return_value);}
+	for (i = 0; i < num_threads; i++)
+	{
+		std::cout << "agent num " + std::to_string(i) << '\n';
+		std::cout << (*agents_list[i].getQ()) << '\n';
+		std::cout << '\n';
+		std::cout << '\n';
+	}
+	std::cout << "global_q" << '\n';
+	std::cout << (*agents_list[0].getGlobalQ()) << '\n';
 	std::cout << '\n';
 	std::cout << '\n';
 
