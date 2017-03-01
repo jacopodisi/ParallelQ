@@ -3,23 +3,23 @@
 
 int main(int argc, char* argv[])
 {
+	std::cout << "1 ";
 	int num_threads;
+	std::cout << "1 ";
 	pthread_mutex_t m;
 	pthread_attr_t attr;
 	std::shared_ptr<Eigen::MatrixXd> global_q1;
 	std::shared_ptr<Eigen::MatrixXd> global_q2;
+	std::cout << "1 ";
 	int cache, size, i;
-
-
-	pthread_t t1;
-	pthread_t t2;
 	void * return_value;
-	
+	std::cout << "1 ";
 	srand(time(0));
 	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
 	Environment env (14, atof(argv[1]));
 	global_q1 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
 	global_q1->setZero();
+	std::cout << "1 ";
 	global_q2 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
 	global_q2->setZero();
 	num_threads = atof(argv[2]);
@@ -27,16 +27,19 @@ int main(int argc, char* argv[])
 	pthread_mutex_init(&m,NULL);
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	std::cout << "1 ";
 	switch (num_threads)
 	{
 		case 2: cache = 8;
 	}
 	std::vector<Agent> agents_list;
+	std::cout << "1 ";
 	for (i = 0; i < num_threads-1; i++)
 	{
 		Agent a(env, i*size, i*size+size, cache, m);
 		agents_list[i] = (a);
 	}
+	std::cout << "1 ";
 	if (num_threads == 1 || num_threads == 0)
 	{
 		Agent a(env);
@@ -47,6 +50,7 @@ int main(int argc, char* argv[])
 		agents_list[i] = (a);
 	}
 	pthread_t threads[num_threads];
+	std::cout << "1 ";
 	for (i = 0; i < num_threads; i++) {pthread_create(&threads[i], &attr, Agent::learn, (void *) &agents_list[i]);}
 	for (i = 0; i < num_threads; i++) {pthread_join(threads[i], &return_value);}
 	for (i = 0; i < num_threads; i++)
