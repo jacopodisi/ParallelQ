@@ -38,27 +38,21 @@ int Agent::epsilonGreedyPolicy(int state, double epsilon)
 {
 	std::shared_ptr<Eigen::VectorXd> policy = std::make_shared<Eigen::VectorXd>(num_actions);
 	(*policy).fill(epsilon / num_actions);
-	if (debugAgent) std::cout << (*policy).transpose() << " ";
 	int max = 0;
 	for (int i = 1; i < num_actions; ++i)
 	{
 		if ((*q_function)(state, i) > (*q_function)(state, max))
 			max = i;
 	}
-	if (debugAgent) std::cout << std::to_string(max) << " ";
 	(*policy)(max) += 1 - epsilon;
 	double val = ((double) rand() / RAND_MAX);
-	if (debugAgent) std::cout << "val: " + std::to_string(val) + " ";
-	if (debugAgent) std::cout << (*policy).transpose() << " ";
 	double prob = 0;
 	int action = 0;
 	for(int i = 0; i < num_actions; i++)
 	{
 		prob += (*policy)(i);
-		if (debugAgent) std::cout << std::to_string(prob) + " ";
 		if (val < prob) {action = i; break;}
 	}
-	if (debugAgent) std::cout << std::to_string(action) + " ";
 	return action;
 }
 
@@ -74,18 +68,14 @@ void * Agent::learn(void * agent)
 	{
 		outside = false;
 		if (EPS < 0) epsilon = pow(1-episode/NUM_EP, 2);
-		if (debugAgent) std::cout << "before reset\n";
 		int state = ag.env.reset(ag.init_row, ag.end_row);
-		if (debugAgent) std::cout << std::to_string(state);
 		//calculate the action to be performed 
 		//based on the e-greedy policy derived from the Q function
 		int action = ag.epsilonGreedyPolicy(state, epsilon);
 		//first condition
 		for (int i = 0; i < MSE; ++i)
 		{
-			if (debugAgent) std::cout << std::to_string(state) << ' ';
 		    observation ob = ag.env.step(static_cast<Actions>(action));
-			if (debugAgent) std::cout << std::to_string(static_cast<Actions>(action)) << ' ';
 			int pos = ag.env.getCurrStateNumber();
 			if (pos<ag.init_row && pos>ag.end_row)
 			{
@@ -103,7 +93,6 @@ void * Agent::learn(void * agent)
 			//second condition
 		    if (ob.done)
 		    {
-				if (debugAgent) std::cout << std::to_string(state);
 		    	double delta = ob.reward - (*ag.q_function)(state, action);
 		    	(*ag.q_function)(state, action) += ALPHA * delta;
 		    	if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
@@ -129,10 +118,7 @@ void * Agent::learn(void * agent)
 		    if (outside) break;
 		    state = ob.next_state;
 		    action = next_action;
-		    if (debugAgent) std::cout << "fs" << '\n';
 		}
-		if (debugAgent) std::cout << '\n';
-		if (debugAgent) std::cout << (*ag.q_function) << '\n';
 	}
 	return (void *) &(*ag.q_function);
 }

@@ -1,4 +1,4 @@
-NAME	 = myprog
+NAME	 = myprog.out
 CXX	 = g++
 CXXFLAGS = -std=c++11 -Wall -I$(INCDIR) -I$(INCDIREIGEN)
 
