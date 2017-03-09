@@ -1,3 +1,6 @@
+#ifndef GRIDHANDLER
+#define GRIDHANDLER
+
 #include "types.h"
 #include <Eigen/Dense>
 #include <thread>
@@ -54,4 +57,4 @@ check if a file exists
 */
 bool fileExists(const std::string& filename);
 
-
+#endif

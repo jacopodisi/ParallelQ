@@ -1,3 +1,6 @@
+#ifndef AGENT
+#define AGENT
+
 #include "dynamicprog.h"
 #include <pthread.h>
 
@@ -34,3 +37,5 @@ private:
 	std::shared_ptr<Eigen::VectorXd> q_cache;
 	pthread_mutex_t mutex;
 };
+
+#endif

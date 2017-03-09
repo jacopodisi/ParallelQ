@@ -1,3 +1,6 @@
+#ifndef DYNAMICPROG
+#define DYNAMICPROG
+
 #include "environment.h"
 #include <cmath>
 
@@ -17,3 +20,5 @@ public:
 
 	~Dynamicprog();
 };
+
+#endif
