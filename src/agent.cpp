@@ -202,7 +202,7 @@ std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
     std::size_t size = std::ftell(fs)/(sizeof(double)*num_actions);
     std::shared_ptr<Eigen::MatrixXd> Q = std::make_shared<Eigen::MatrixXd>(size,num_actions);
     std::fseek(fs, 0, SEEK_SET);
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
 		for (int j = 0; j < num_actions; j++)
 			fread(&(*Q)(i,j), sizeof(double), 1, fs);
