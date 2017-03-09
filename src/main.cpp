@@ -16,10 +16,6 @@ int main(int argc, char* argv[])
 	srand(time(0));
 	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
 	Environment env (14, atof(argv[1]));
-	global_q1 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
-	global_q1->setZero();
-	global_q2 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
-	global_q2->setZero();
 	num_threads = 2;
 
 	pthread_mutex_init(&m,NULL);

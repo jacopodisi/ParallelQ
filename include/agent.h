@@ -7,7 +7,7 @@
 typedef  Eigen::Matrix<Q_value, Eigen::Dynamic, Eigen::Dynamic> QList;
 
 #define EPS 0.1
-#define NUM_EP 32000
+#define NUM_EP 320
 #define DISCOUNT 0.95
 #define ALPHA 1
 #define MSE 10000
