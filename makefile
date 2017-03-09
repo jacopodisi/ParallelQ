@@ -1,10 +1,10 @@
-NAME	 = myprog
+NAME	 = myprog.out
 CXX	 = g++
-CXXFLAGS = -std=c++11 -Wall -I$(INCDIR) -I$(INCDIREIGEN)
+CXXFLAGS = -std=c++11 -Wall -I$(INCDIR) -I$(INCDEPENDENCIES)
 
 SRCDIR	 = ./src
 INCDIR	 = ./include
-INCDIREIGEN = /usr/local/include/eigen3
+INCDEPENDENCIES = ./dependencies
 SOURCES	 = $(SRCDIR)/main.cpp $(SRCDIR)/environment.cpp $(SRCDIR)/gridhandler.cpp  $(SRCDIR)/dynamicprog.cpp $(SRCDIR)/agent.cpp
 OBJECTS	 = $(SOURCES:.cpp=.o)
 
