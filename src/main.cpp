@@ -3,7 +3,6 @@
 
 int main(int argc, char* argv[])
 {
-	pthread_attr_t attr;
 	int num_threads, cache, size, i;
 	void * return_value;
 	srand(time(0));
@@ -33,6 +32,7 @@ int main(int argc, char* argv[])
 	{
 		agents_list[i] = *(new Agent(env, i*size, env.getStatesList()->rows() - 1, cache));
 	}
+	pthread_attr_t attr;
 	pthread_t threads[num_threads];
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);

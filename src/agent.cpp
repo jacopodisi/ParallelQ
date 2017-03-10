@@ -5,7 +5,7 @@
 #define DISCOUNT 0.95
 #define ALPHA 1
 #define MSE 10000
-#define SHARED_MEM false
+#define SHARED_MEM true
 
 std::shared_ptr<Eigen::MatrixXd> Agent::global_q = std::make_shared<Eigen::MatrixXd>();
 
