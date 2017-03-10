@@ -1,3 +1,6 @@
+#ifndef TYPES
+#define TYPES
+
 #include <cstdint>
 #include <iostream>
 #include <sys/stat.h>
@@ -29,3 +32,5 @@ struct Q_value
 	int value = 0;
 	int cache = 0;
 };
+
+#endif //TYPES

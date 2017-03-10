@@ -166,9 +166,9 @@ void saveGrid(GridMatrix_pointer grid, int id)
 	int output[size];
 	FILE *fs = fopen(fn.c_str(), "wb");
 	if(!fs) std::perror("File opening failed");
-	for (size_t i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
-		for (size_t j = 0; j < size; j++)
+		for (int j = 0; j < size; j++)
 		{
 			output[j] = (*grid)(i,j).type;
 		}

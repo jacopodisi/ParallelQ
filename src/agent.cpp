@@ -23,10 +23,9 @@ Agent::Agent(Environment param_env)
 	init_row = 0;
 	end_row = env.getStatesList()->rows() - 1;
 	cache_size = 0;
-	pthread_mutex_init(&mutex, NULL);
 }
 
-Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, pthread_mutex_t m)
+Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size)
 {
 	parallel = true;
 	env = param_env;
@@ -46,7 +45,6 @@ Agent::Agent(Environment param_env, int param_init, int param_end, int param_cac
 	init_row = param_init;
 	end_row = param_end;
 	cache_size = param_cache_size;
-	mutex = m;
 }
 
 int Agent::epsilonGreedyPolicy(int state, double epsilon)
@@ -99,7 +97,6 @@ void * Agent::learn(void * agent)
 					{
 						if ((*ag.q_cache)(ob.next_state) == 0)
 						{
-							//TODO mutex
 							(*ag.q_function).row(ob.next_state) = (*global_q).row(ob.next_state);
 							(*ag.q_cache)(ob.next_state) = ag.cache_size;
 						} else 
@@ -119,7 +116,6 @@ void * Agent::learn(void * agent)
 		    	{
 			    	if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
 			    	{
-			    		//TODO mutex
 			    		(*global_q).row(state) = (*ag.q_function).row(state);
 			    		start = std::chrono::steady_clock::now();
 			    	}
@@ -136,7 +132,6 @@ void * Agent::learn(void * agent)
 		    {
 			    if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
 		    	{
-		    		//TODO mutex
 		    		(*global_q).row(state) = (*ag.q_function).row(state);
 		    		start = std::chrono::steady_clock::now();
 		    	}
@@ -214,7 +209,7 @@ std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
     std::size_t size = std::ftell(fs)/(sizeof(double)*num_actions);
     std::shared_ptr<Eigen::MatrixXd> Q = std::make_shared<Eigen::MatrixXd>(size,num_actions);
     std::fseek(fs, 0, SEEK_SET);
-	for (int i = 0; i < size; i++)
+	for (std::size_t i = 0; i < size; i++)
 	{
 		for (int j = 0; j < num_actions; j++)
 			fread(&(*Q)(i,j), sizeof(double), 1, fs);

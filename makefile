@@ -1,6 +1,6 @@
 NAME	 = myprog.out
 CXX	 = g++
-CXXFLAGS = -std=c++11 -Wall -I$(INCDIR) -I$(INCDEPENDENCIES)
+CXXFLAGS = -std=c++11 -lpthread -Wall -I$(INCDIR) -I$(INCDEPENDENCIES)
 
 SRCDIR	 = ./src
 INCDIR	 = ./include
@@ -15,7 +15,7 @@ debug:	CXXFLAGS += -g -DDEBUG
 debug:	$(NAME)
 
 $(NAME):  $(OBJECTS)
-	$(CXX) $^ -o $@ $(CXXLFAGS)
+	$(CXX) $^ -o $@ $(CXXFLAGS)
 
 $(SRCDIR)/%.o: %.cpp
 	$(CXX) $^ -c $< $(CXXFLAGS)

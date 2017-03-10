@@ -3,59 +3,45 @@
 
 int main(int argc, char* argv[])
 {
-	std::cout << "1 ";
-	int num_threads;
-	std::cout << "1 ";
-	pthread_mutex_t m;
 	pthread_attr_t attr;
-	std::shared_ptr<Eigen::MatrixXd> global_q1;
-	std::shared_ptr<Eigen::MatrixXd> global_q2;
-	std::cout << "1 ";
-	int cache, size, i;
+	int num_threads, cache, size;
+	int i = 0;
 	void * return_value;
-	std::cout << "1 ";
 	srand(time(0));
 	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
 	Environment env (14, atof(argv[1]));
-	global_q1 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
-	global_q1->setZero();
-	std::cout << "1 ";
-	global_q2 = std::make_shared<Eigen::MatrixXd>(env.getStatesList()->rows(), env.getNumActions());
-	global_q2->setZero();
+	if (argc < 3) { std::cout << "choose num_threads: "; std::cin >> argv[2];}
 	num_threads = atof(argv[2]);
+	while(num_threads!=1 && num_threads!=2 && num_threads!=4 && num_threads!=8)
+	{
+	    std::cout << "wrong num_threads, choose another (1,2,4 or 8): ";
+	    std::cin >> num_threads;
+	}
 	size = env.getStatesList()->rows() / num_threads;
-	pthread_mutex_init(&m,NULL);
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-	std::cout << "1 ";
 	switch (num_threads)
 	{
-		case 2: cache = 8;
+		case 1: cache = 0; break;
+		case 2: cache = 8; break;
+		//todo cache other case
 	}
-	std::vector<Agent> agents_list;
-	std::cout << "1 ";
-	for (i = 0; i < num_threads-1; i++)
+	//creation of different agents
+	std::vector<Agent> agents_list(num_threads, Agent(env));
+	for (;i < num_threads-1; i++)
 	{
-		Agent a(env, i*size, i*size+size, cache, m);
-		agents_list[i] = (a);
+		agents_list[i] = *(new Agent(env, i*size, i*size+size, cache));
 	}
-	std::cout << "1 ";
-	if (num_threads == 1 || num_threads == 0)
+	if (num_threads != 1)
 	{
-		Agent a(env);
-		agents_list[i] = (a);
-	} else 
-	{
-		Agent a(env, i*size, env.getStatesList()->rows() - 1, cache, m);
-		agents_list[i] = (a);
+		agents_list[i] = *(new Agent(env, i*size, env.getStatesList()->rows() - 1, cache));
 	}
 	pthread_t threads[num_threads];
-	std::cout << "1 ";
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 	for (i = 0; i < num_threads; i++) {pthread_create(&threads[i], &attr, Agent::learn, (void *) &agents_list[i]);}
 	for (i = 0; i < num_threads; i++) {pthread_join(threads[i], &return_value);}
 	for (i = 0; i < num_threads; i++)
 	{
-		std::cout << "agent num " + std::to_string(i) << '\n';
+		std::cout << "agent" + std::to_string(i) << '\n';
 		std::cout << (*agents_list[i].getQ()) << '\n';
 		std::cout << '\n';
 		std::cout << '\n';

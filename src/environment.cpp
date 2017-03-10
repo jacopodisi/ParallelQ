@@ -206,7 +206,7 @@ void Environment::saveValueFunction(std::shared_ptr<Eigen::VectorXd> value_funct
 	double output[size];
 	FILE *fs = fopen(fn.c_str(), "wb");
 	if(!fs) std::perror("File opening failed");
-	for (size_t i = 0; i < size; i++) output[i] = (*value_function)(i);
+	for (int i = 0; i < size; i++) output[i] = (*value_function)(i);
 	std::fwrite(output, sizeof(double), size, fs);
 	if(std::fflush(fs) != 0)
 	{
@@ -231,7 +231,7 @@ std::shared_ptr<Eigen::VectorXd> Environment::readValueFunction()
     std::cout << std::to_string(size) << '\n';
     std::shared_ptr<Eigen::VectorXd> V = std::make_shared<Eigen::VectorXd>(size);
     std::fseek(fs, 0, SEEK_SET);
-	for (int i = 0; i < size; i++)
+	for (std::size_t i = 0; i < size; i++)
 	{
 		fread(&(*V)(i), sizeof(double), 1, fs);
 	}

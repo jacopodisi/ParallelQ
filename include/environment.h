@@ -1,3 +1,6 @@
+#ifndef ENVIRONMENT
+#define ENVIRONMENT
+
 #include "gridhandler.h"
 #include <map>
 #include <cmath>
@@ -118,3 +121,5 @@ private:
 	*/
 	std::shared_ptr<std::map<std::pair<int, int>, int>> positions_list;
 };
+
+#endif //ENVIRONMENT
