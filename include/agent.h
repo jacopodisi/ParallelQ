@@ -4,13 +4,20 @@
 #include "dynamicprog.h"
 #include <pthread.h>
 
-typedef  Eigen::Matrix<Q_value, Eigen::Dynamic, Eigen::Dynamic> QList;
+struct agent_options{
+	double eps = 0.1;
+	int num_ep = 32000;
+	double discount = 0.95;
+	double alpha = 1;
+	int mse = 10000;
+	bool shared_mem = true;
+};
 
 class Agent
 {
 public:
-	Agent(Environment env);
-	Agent(Environment env, int init, int end, int param_cache_size);
+	Agent(Environment env, agent_options param_opt);
+	Agent(Environment env, int init, int end, int param_cache_size, agent_options param_opt);
 	int epsilonGreedyPolicy(int state, double epsilon);
 	static void * learn(void * agent);
 	std::shared_ptr<Eigen::MatrixXd> getQ();
@@ -30,6 +37,7 @@ private:
 	std::shared_ptr<Eigen::MatrixXd> q_function;
 	std::shared_ptr<Eigen::VectorXd> q_cache;
 	bool parallel;
+	agent_options opt;
 };
 
 #endif //AGENT

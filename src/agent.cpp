@@ -1,15 +1,8 @@
 #include "agent.h"
 
-#define EPS 0.1
-#define NUM_EP 32000
-#define DISCOUNT 0.95
-#define ALPHA 1
-#define MSE 10000
-#define SHARED_MEM true
-
 std::shared_ptr<Eigen::MatrixXd> Agent::global_q = std::make_shared<Eigen::MatrixXd>();
 
-Agent::Agent(Environment param_env)
+Agent::Agent(Environment param_env, agent_options param_opt)
 {
 	parallel = false;
 	env = param_env;
@@ -23,16 +16,23 @@ Agent::Agent(Environment param_env)
 	init_row = 0;
 	end_row = env.getStatesList()->rows() - 1;
 	cache_size = 0;
+	opt = param_opt;
 }
 
-Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size)
+Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, agent_options param_opt)
 {
 	parallel = true;
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
 	global_q->setZero(states_list->rows(), env.getNumActions());
-	if(SHARED_MEM)
+	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
+	q_cache->setZero();
+	init_row = param_init;
+	end_row = param_end;
+	cache_size = param_cache_size;
+	opt = param_opt;
+	if(opt.shared_mem)
 	{
 		q_function = global_q;
 	} else
@@ -40,11 +40,6 @@ Agent::Agent(Environment param_env, int param_init, int param_end, int param_cac
 		q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 		q_function->setZero();
 	}
-	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
-	q_cache->setZero();
-	init_row = param_init;
-	end_row = param_end;
-	cache_size = param_cache_size;
 }
 
 int Agent::epsilonGreedyPolicy(int state, double epsilon)
@@ -73,19 +68,19 @@ void * Agent::learn(void * agent)
 {
 	Agent ag = (*(Agent *)agent);
 	bool outside = false;
-	double epsilon = EPS;
+	double epsilon = ag.opt.eps;
 	std::chrono::steady_clock::time_point start;
 	start = std::chrono::steady_clock::now();
-	for (int episode = 0; episode < NUM_EP; episode++)
+	for (int episode = 0; episode < ag.opt.num_ep; episode++)
 	{
 		outside = false;
-		if (EPS < 0) epsilon = pow(1-episode/NUM_EP, 2);
+		if (ag.opt.eps < 0) epsilon = pow(1-episode/ag.opt.num_ep, 2);
 		int state = ag.env.reset(ag.init_row, ag.end_row);
 		//calculate the action to be performed 
 		//based on the e-greedy policy derived from the Q function
 		int action = ag.epsilonGreedyPolicy(state, epsilon);
 		//first condition
-		for (int i = 0; i < MSE; ++i)
+		for (int i = 0; i < ag.opt.mse; ++i)
 		{
 		    observation ob = ag.env.step(static_cast<Actions>(action));
 		    if (ag.parallel)
@@ -93,7 +88,7 @@ void * Agent::learn(void * agent)
 				int pos = ag.env.getCurrStateNumber();
 				if (pos<ag.init_row && pos>ag.end_row)
 				{
-					if (!SHARED_MEM)
+					if (!ag.opt.shared_mem)
 					{
 						if ((*ag.q_cache)(ob.next_state) == 0)
 						{
@@ -111,8 +106,8 @@ void * Agent::learn(void * agent)
 		    if (ob.done)
 		    {
 		    	double delta = ob.reward - (*ag.q_function)(state, action);
-		    	(*ag.q_function)(state, action) += ALPHA * delta;
-		    	if(!SHARED_MEM && ag.parallel)
+		    	(*ag.q_function)(state, action) += ag.opt.alpha * delta;
+		    	if(!ag.opt.shared_mem && ag.parallel)
 		    	{
 			    	if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
 			    	{
@@ -125,10 +120,10 @@ void * Agent::learn(void * agent)
 		    int next_action = ag.epsilonGreedyPolicy(ob.next_state, epsilon);
 			//improve the Q function for the current (state, action)
 			//from the deterministic policy, following the e-greedy one
-		    double delta = ob.reward + DISCOUNT * (ag.q_function->row(ob.next_state)).maxCoeff() - (*ag.q_function)(state, action);
-		    (*ag.q_function)(state, action) += ALPHA * delta;
+		    double delta = ob.reward + ag.opt.discount * (ag.q_function->row(ob.next_state)).maxCoeff() - (*ag.q_function)(state, action);
+		    (*ag.q_function)(state, action) += ag.opt.alpha * delta;
 		    //third condition
-		    if(!SHARED_MEM && ag.parallel)
+		    if(!ag.opt.shared_mem && ag.parallel)
 		    {
 			    if ((std::chrono::steady_clock::now() - start) >= std::chrono::microseconds(8))
 		    	{
