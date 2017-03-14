@@ -5,11 +5,15 @@
 
 int main(int argc, char* argv[])
 {
-	int num_threads, cache, size, i;
+	bool print_out = false;
+	bool save_time = false;
+	int num_threads, cache, size, i, id;
+	std::chrono::steady_clock::time_point start, end;
 	void * return_value;
 	srand(time(0));
 	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
-	Environment env (14, atof(argv[1]));
+	id = atof(argv[1]);
+	Environment env (14, id);
 	if (argv[2] == NULL) { std::cout << "choose num_threads: "; std::cin >> argv[2];}
 	num_threads = atof(argv[2]);
 	while(num_threads!=1 && num_threads!=2 && num_threads!=4 && num_threads!=8)
@@ -27,6 +31,8 @@ int main(int argc, char* argv[])
 		{"alpha",			required_argument, 	0, 'a'	},
 		{"mse",				required_argument, 	0, 'm'	},
 		{"shared_mem",		required_argument, 	0, 's'	},
+		{"print_out",		required_argument, 	0, 'p'	},
+		{"save_time",		required_argument, 	0, 't'	},
 		{0,					0,					0,	0	},
 	};
 	int index;
@@ -67,6 +73,22 @@ int main(int argc, char* argv[])
 						opt.shared_mem = false;
 				}
 				break;
+			case 'p':
+				if(optarg)
+				{
+					std::string str(optarg);
+					if (str[0] == 'T' || str[0] == 't')
+						print_out = true;
+				}
+				break;
+			case 't':
+				if(optarg)
+				{
+					std::string str(optarg);
+					if (str[0] == 'T' || str[0] == 't')
+						save_time = true;
+				}
+				break;
 		}
 	}
 	//END OPTIONS
@@ -92,17 +114,35 @@ int main(int argc, char* argv[])
 	pthread_t threads[num_threads];
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+	start = std::chrono::steady_clock::now();
 	for (i = 0; i < num_threads; i++) {pthread_create(&threads[i], &attr, Agent::learn, (void *) &agents_list[i]);}
 	for (i = 0; i < num_threads; i++) {pthread_join(threads[i], &return_value);}
-	for (i = 0; i < num_threads; i++)
+	end = std::chrono::steady_clock::now();
+	auto interval = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	if (print_out)
 	{
-		std::cout << "q function of agent" + std::to_string(i) << '\n';
-		std::cout << (*agents_list[i].getQ()) << '\n';
-		std::cout << '\n';
-		std::cout << '\n';
+		for (i = 0; i < num_threads; i++)
+		{
+			std::cout << "q function of agent" + std::to_string(i) << '\n';
+			std::cout << (*agents_list[i].getQ()) << '\n'
+					  << '\n'
+					  << '\n';
+		}
+		std::cout << "global_q" << '\n'
+				  << (*agents_list[0].getGlobalQ()) << "\n"
+				  << '\n'
+				  << '\n';
+		std::cout << "duration: "
+	              << std::chrono::duration_cast<std::chrono::seconds>(end - start).count()
+	              << "."
+	              << (std::chrono::duration_cast<std::chrono::microseconds>(end - start).count())%1000000
+	              << "s\n";
 	}
-	std::cout << "global_q" << '\n';
-	std::cout << (*agents_list[0].getGlobalQ()) << '\n';
-	std::cout << '\n';
-	std::cout << '\n';
+    if (save_time)
+    {
+    	std::ofstream outfile;
+	    std::string fn = "times/usid" + std::to_string(id) + "np" + std::to_string(num_threads) + ".txt";
+		outfile.open(fn, std::ios_base::app);
+		outfile << interval << '\n'; 
+    }
 }

@@ -39,8 +39,3 @@ std::shared_ptr<Eigen::VectorXd> Dynamicprog::lookahead(Environment env, int sta
 	}
 	return A;
 }
-
-
-
-
-

@@ -244,9 +244,3 @@ void Environment::printGridEnv()
 {
 	printGrid(grid, curr_state.row, curr_state.col);
 }
-
-
-
-
-
-

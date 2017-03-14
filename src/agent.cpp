@@ -213,8 +213,3 @@ std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
 	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
 	return Q;
 }
-
-
-
-
-
