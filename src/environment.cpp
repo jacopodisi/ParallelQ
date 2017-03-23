@@ -1,4 +1,5 @@
 #include "environment.h"
+#include "functions.h"
 
 Environment::Environment()
 {
@@ -9,17 +10,11 @@ Environment::Environment()
 
 Environment::Environment(int grid_size, int grid_id)
 {
-	int max_size;
-	for (max_size = 14; ; ++max_size)
-	{
-		std::string fn = "grid/grid_matrix_size" + std::to_string(max_size) + "id0.bin";
-		if (!fileExists(fn)) {max_size--; break;}
-	}
 	while (true)
-	{
-		if(grid_size<=max_size) break;
-	    std::cout << "incorrect grid size \n";
-		std::cout << "specify a new size value (MAX size: " + std::to_string(max_size) + "): ";
+	{	
+		std::string fn = "grid/grid_matrix_size" + std::to_string(grid_size) + "id0.bin";
+		if (Functions::fileExists(fn)) break;
+	    std::cout << "incorrect grid size, specify a new size value: ";
 		std::cin >> grid_size;
 		std::cout << '\n';
 	}
@@ -27,7 +22,7 @@ Environment::Environment(int grid_size, int grid_id)
 	for (max_id = 0; ; ++max_id)
 	{
 		std::string fn = "grid/grid_matrix_size" + std::to_string(grid_size) + "id" + std::to_string(max_id) + ".bin";
-		if (!fileExists(fn)) {max_id--; break;}
+		if (!Functions::fileExists(fn)) {max_id--; break;}
 	}
 	while (true)
 	{
@@ -201,37 +196,33 @@ std::shared_ptr<std::map<std::pair<int, int>, int>> Environment::getPositionsLis
 void Environment::saveValueFunction(std::shared_ptr<Eigen::VectorXd> value_function)
 {
 	int gridsize = grid->rows();
-	int size = value_function->rows();
-	std::string fn = "grid/value_function_grid_size" + std::to_string(gridsize) + "id" + std::to_string(id) + ".bin";
-	double output[size];
-	FILE *fs = fopen(fn.c_str(), "wb");
-	if(!fs) std::perror("File opening failed");
-	for (int i = 0; i < size; i++) output[i] = (*value_function)(i);
-	std::fwrite(output, sizeof(double), size, fs);
-	if(std::fflush(fs) != 0)
-	{
-		std::cout << "Error in flushing file" << '\n';
-		return;
-	}
-	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+	std::string dir = "grid";
+	std::string fn = "value_function_grid_size" + std::to_string(gridsize) + "id" + std::to_string(id);
+	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>(value_function->rows(), 1);
+	mat->col(0) = value_function->col(0);
+	Functions::save(mat, fn, dir);
 }
 
 std::shared_ptr<Eigen::VectorXd> Environment::readValueFunction()
 {
+	std::cout << "1\n";
 	std::string fn = "grid/value_function_grid_size" + std::to_string(grid->rows()) + "id" + std::to_string(id) + ".bin";
-	if (!fileExists(fn)) {std::cout << "file does not exist: " + fn << '\n'; std::perror(fn.c_str());}
+	if (!Functions::fileExists(fn)) 
+	{
+		std::cout << "Calculating Value function of grid " << id << '\n';
+		Environment::saveValueFunction(Environment::valueIteration());
+	}
 	FILE *fs = fopen(fn.c_str(), "rb");
 	if(!fs)
 	{
 		std::cout << "File opening failed: ";
 		std::perror(fn.c_str());
 	}
-	std::fseek(fs, 0, SEEK_END);
-    std::size_t size = std::ftell(fs)/sizeof(double);
-    std::cout << std::to_string(size) << '\n';
-    std::shared_ptr<Eigen::VectorXd> V = std::make_shared<Eigen::VectorXd>(size);
-    std::fseek(fs, 0, SEEK_SET);
-	for (std::size_t i = 0; i < size; i++)
+	uint rows, cols;
+	fread(&rows, sizeof(uint), 1, fs);
+	fread(&cols, sizeof(uint), 1, fs);
+    std::shared_ptr<Eigen::VectorXd> V = std::make_shared<Eigen::VectorXd>(rows);
+    for (std::size_t i = 0; i < rows; i++)
 	{
 		fread(&(*V)(i), sizeof(double), 1, fs);
 	}
@@ -243,4 +234,44 @@ std::shared_ptr<Eigen::VectorXd> Environment::readValueFunction()
 void Environment::printGridEnv()
 {
 	printGrid(grid, curr_state.row, curr_state.col);
+}
+
+std::shared_ptr<Eigen::VectorXd> Environment::valueIteration(double discount_factor, double theta)
+{
+	std::shared_ptr<PosVector> states_list = getStatesList();
+	std::shared_ptr<std::map<std::pair<int, int>, int>> p_list = getPositionsList();
+	std::shared_ptr<Eigen::VectorXd> value_function = std::make_shared<Eigen::VectorXd>(states_list->rows());
+	std::shared_ptr<Eigen::VectorXd> A;
+	if (debugDynamic) std::cout << std::to_string(states_list->rows()) << '\n';
+	(*value_function).setZero();
+	while(true) {
+	    double delta = 0;
+	    if (debugDynamic) std::cout << "             u d l r" << '\n';
+	    for (int state = 0; state < value_function->rows(); state++)
+	    {
+	    	if (debugDynamic) std::cout << "pos: " + std::to_string((*states_list)(state).row) + " " + std::to_string((*states_list)(state).col) + " --> ";
+	    	A = lookahead(state, value_function, discount_factor);
+	    	if (debugDynamic) std::cout << (*A).transpose() <<   '\n';
+	    	double best_action_value = (*A).maxCoeff();
+	    	delta = std::fmax(delta, std::abs(best_action_value - (*value_function)(state)));
+	    	(*value_function)(state) = best_action_value;
+	    }
+	    if (delta <= theta) break;
+	    if (debugDynamic) std::cout << "delta = " + std::to_string(delta) << '\n';
+	}
+	return value_function;
+}
+
+std::shared_ptr<Eigen::VectorXd> Environment::lookahead(int state, std::shared_ptr<Eigen::VectorXd> V, double discount_factor)
+{
+	std::shared_ptr<Eigen::VectorXd> A = std::make_shared<Eigen::VectorXd>(getNumActions());
+	(*A).setZero();
+	observation ob;
+	for (int i = 0; i < getNumActions(); ++i)
+	{
+		ob = prediction(state, static_cast<Actions>(i));
+		if (ob.done) (*A)(i) = ob.reward;
+		else (*A)(i) = ob.reward + discount_factor * (*V)(ob.next_state);
+	}
+	return A;
 }
