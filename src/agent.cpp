@@ -1,14 +1,18 @@
 #include "agent.h"
+#include "functions.h"
 
 std::shared_ptr<Eigen::MatrixXd> Agent::global_q = std::make_shared<Eigen::MatrixXd>();
+std::shared_ptr<Eigen::MatrixXd> Agent::ep_value_function = std::make_shared<Eigen::MatrixXd>();
+int Agent::num_agents = 0;
 
-Agent::Agent(Environment param_env, agent_options param_opt)
+Agent::Agent(Environment param_env, agent_options param_opt, bool param_save_ep_val)
 {
+	save_ep_val = param_save_ep_val;
+	leader_agent = false;
 	parallel = false;
 	env = param_env;
 	states_list = env.getStatesList();
 	num_actions = env.getNumActions();
-	//global_q->setZero(states_list->rows(), env.getNumActions());
 	q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 	q_function->setZero();
 	q_cache = std::make_shared<Eigen::VectorXd>(states_list->rows());
@@ -17,10 +21,15 @@ Agent::Agent(Environment param_env, agent_options param_opt)
 	end_row = env.getStatesList()->rows() - 1;
 	cache_size = 0;
 	opt = param_opt;
+	opt.shared_mem = false;
+	value_function = env.readValueFunction();
+	ep_value_function->setZero(value_function->rows(), opt.num_ep);
 }
 
-Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, agent_options param_opt)
+Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, agent_options param_opt, bool param_save_ep_val)
 {
+	save_ep_val = param_save_ep_val;
+	leader_agent = false;
 	parallel = true;
 	env = param_env;
 	states_list = env.getStatesList();
@@ -40,6 +49,10 @@ Agent::Agent(Environment param_env, int param_init, int param_end, int param_cac
 		q_function = std::make_shared<Eigen::MatrixXd>(states_list->rows(), env.getNumActions());
 		q_function->setZero();
 	}
+	value_function = env.readValueFunction();
+	ep_value_function->setZero(value_function->rows(), opt.num_ep);
+	num_agents++;
+	if (num_agents == 1) leader_agent = true;
 }
 
 int Agent::epsilonGreedyPolicy(int state, double epsilon)
@@ -73,6 +86,13 @@ void * Agent::learn(void * agent)
 	start = std::chrono::steady_clock::now();
 	for (int episode = 0; episode < ag.opt.num_ep; episode++)
 	{
+		//save current value function
+		if(ag.save_ep_val)
+		{
+			if (!ag.parallel) (*ep_value_function).col(episode) = ag.q_function->rowwise().maxCoeff();
+			else if (ag.leader_agent) (*ep_value_function).col(episode) = global_q->rowwise().maxCoeff();
+		}
+		
 		outside = false;
 		if (ag.opt.eps < 0) epsilon = pow(1-episode/ag.opt.num_ep, 2);
 		int state = ag.env.reset(ag.init_row, ag.end_row);
@@ -114,6 +134,9 @@ void * Agent::learn(void * agent)
 			    		(*global_q).row(state) = (*ag.q_function).row(state);
 			    		start = std::chrono::steady_clock::now();
 			    	}
+			    } else 
+			    {
+
 			    }
 		    	break;
 		    }
@@ -150,44 +173,25 @@ std::shared_ptr<Eigen::MatrixXd> Agent::getGlobalQ()
 
 void Agent::saveQ(std::string fopt)
 {
-	std::string fn = "qfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt + ".bin";
-	std::string choice;
-	while (fileExists(fn)) 
-	{
-		std::cout << "file " + fn + " already exist. Do you want to overwrite it?(y/n): ";
-		std::cin >> choice;
-		std::cout  << '\n';
-		while(choice != "y" && choice != "n")
-		{
-			std::cout << "Invalid option (y/n): ";
-			std::cin >> choice;
-		}
-		if (choice == "y") break;
-		else std::cout << "specify a new file name: qfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId());
-		std::cin >> fopt;
-		fn = "qfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt + ".bin";
-	}
-	int size = q_function->cols();
-	double output[size];
-	FILE *fs = fopen(fn.c_str(), "wb");
-	if(!fs) std::perror("File opening failed");
-	for (int i = 0; i < q_function->rows(); ++i)
-	{
-		for (int j = 0; j < size; j++) output[j] = (*q_function)(i,j);
-		std::fwrite(output, sizeof(double), size, fs);
-	}
-	if(std::fflush(fs) != 0)
-	{
-		std::cout << "Error in flushing file" << '\n';
-		return;
-	}
-	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+	std::string dir = "qfunc";
+	std::string fn = "gridsize" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
+	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>();
+	if (parallel) mat = global_q;
+	else mat = q_function;
+	Functions::save(mat, fn, dir);
+}
+
+void Agent::saveEpVF(std::string fopt)
+{
+	std::string dir = "valfuncepisodes";
+	std::string fn = "size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
+	Functions::save(ep_value_function, fn, dir);
 }
 
 std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
 {
 	std::string fn = "qfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt + ".bin";	
-	while (!fileExists(fn)) 
+	while (!Functions::fileExists(fn))
 	{
 		std::cout << "file does not exist: " + fn << '\n';
 		std::cout << "Specify a new file name (size=" + std::to_string(env.getGrid()->rows()) + ", id=" + std::to_string(env.getId()) + "): ";
@@ -200,13 +204,14 @@ std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
 		std::cout << "File opening failed: ";
 		std::perror(fn.c_str());
 	}
-	std::fseek(fs, 0, SEEK_END);
-    std::size_t size = std::ftell(fs)/(sizeof(double)*num_actions);
-    std::shared_ptr<Eigen::MatrixXd> Q = std::make_shared<Eigen::MatrixXd>(size,num_actions);
+	uint rows, cols;
+	fread(&rows, sizeof(uint), 1, fs);
+	fread(&cols, sizeof(uint), 1, fs);
+	std::shared_ptr<Eigen::MatrixXd> Q = std::make_shared<Eigen::MatrixXd>(rows, cols);
     std::fseek(fs, 0, SEEK_SET);
-	for (std::size_t i = 0; i < size; i++)
+	for (std::size_t i = 0; i < rows; i++)
 	{
-		for (int j = 0; j < num_actions; j++)
+		for (int j = 0; j < cols; j++)
 			fread(&(*Q)(i,j), sizeof(double), 1, fs);
 	}
 
