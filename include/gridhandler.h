@@ -2,7 +2,6 @@
 #define GRIDHANDLER
 
 #include "types.h"
-#include <Eigen/Dense>
 #include <thread>
 #include <chrono>
 #include <list>
@@ -51,10 +50,5 @@ function used to open a grid given the id of the grid and its size
 returning a pointer to the given grid
 */
 std::shared_ptr<MatrixXi> openGrid(int size, int id);
-
-/*
-check if a file exists
-*/
-bool fileExists(const std::string& filename);
 
 #endif //GRIDHANDLER

@@ -1,4 +1,5 @@
 #include "gridhandler.h"
+#include "functions.h"
 
 
 void gridcheck(GridMatrix_pointer grid, int init_row = 0, int init_col = 0)
@@ -97,7 +98,7 @@ GridMatrix_pointer gridGenerator(int gridsize, int wallsize, bool save)
 		while(true)
 	    {
 	    	std::string fn = "grid/grid_matrix_size" + std::to_string(gridsize) + "id" + std::to_string(id) + ".bin";
-	    	if(!fileExists(fn)) break;
+	    	if(!Functions::fileExists(fn)) break;
 	    	id++;
 	    }
 		saveGrid(grid, id);
@@ -161,56 +162,42 @@ void printGrid(std::shared_ptr<MatrixXi> grid, int agent_row, int agent_col)
 
 void saveGrid(GridMatrix_pointer grid, int id)
 {
-	int size = grid->cols();
-	std::string fn = "grid/grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id) + ".bin";
-	int output[size];
-	FILE *fs = fopen(fn.c_str(), "wb");
-	if(!fs) std::perror("File opening failed");
-	for (int i = 0; i < size; i++)
+	std::string dir = "grid";
+	std::string fn = "grid_matrix_size" + std::to_string(grid->cols()) + "id" + std::to_string(id);
+	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>(grid->rows(), grid->cols());
+	for(int i = 0; i < mat->rows(); i++)
 	{
-		for (int j = 0; j < size; j++)
+		for (int j = 0; j < mat->cols(); j++)
 		{
-			output[j] = (*grid)(i,j).type;
-		}
-		std::fwrite(output, sizeof(int), size, fs);
-		if(std::fflush(fs) != 0)
-		{
-			std::cout << "Error in flushing file" << '\n';
-			return;
+			(*mat)(i,j) = (*grid)(i,j).type;
 		}
 	}
-	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+	Functions::save(mat, fn, dir);
 }
 
 std::shared_ptr<MatrixXi> openGrid(int size, int id)
 {
 	std::shared_ptr<MatrixXi> grid = std::make_shared<MatrixXi>(size,size);
 	std::string fn = "grid/grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id) + ".bin";
-	if (!fileExists(fn)) {std::cout << "file does not exist: " + fn << '\n'; std::perror(fn.c_str());}
+	if (!Functions::fileExists(fn)) {std::cout << "file does not exist: " + fn << '\n'; std::perror(fn.c_str());}
 	FILE *fs = fopen(fn.c_str(), "rb");
 	if(!fs)
 	{
 		std::cout << "File opening failed: ";
 		std::perror(fn.c_str());
 	}
+	uint rows, cols;
+	fread(&rows, sizeof(uint), 1, fs);
+	fread(&cols, sizeof(uint), 1, fs);
+	double d;
 	for (int i = 0; i < size; i++)
 	{
 		for (int j = 0; j < size; ++j)
 		{
-			fread(&(*grid)(i,j), sizeof(int), 1, fs);
+			fread(&d, sizeof(double), 1, fs);
+			(*grid)(i,j) = (int) d;
 		}
 	}
-
 	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
 	return grid;
 }
-
-bool fileExists(const std::string& filename)
-{
-    struct stat buf;
-    if (stat(filename.c_str(), &buf) != -1)
-    {
-        return true;
-    }
-    return false;
-};
