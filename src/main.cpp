@@ -5,12 +5,13 @@
 
 int main(int argc, char* argv[])
 {
+	/*
+	srand(time(0));
 	bool print_out = false;
 	bool save_time = false;
 	int num_threads, cache, size, i, id;
 	std::chrono::steady_clock::time_point start, end;
 	void * return_value;
-	srand(time(0));
 	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
 	id = atof(argv[1]);
 	Environment env (14, id);
@@ -143,6 +144,13 @@ int main(int argc, char* argv[])
     	std::ofstream outfile;
 	    std::string fn = "times/usid" + std::to_string(id) + "np" + std::to_string(num_threads) + ".txt";
 		outfile.open(fn, std::ios_base::app);
-		outfile << interval << '\n'; 
+		outfile << interval << '\n';
     }
+    */
+
+    Environment envi(14, 5);
+    envi.printGridEnv();
+    //std::cout << (*envi.readValueFunction());
+
+    //printGrid(gridGenerator(14, 60, true));
 }

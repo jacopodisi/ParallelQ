@@ -4,8 +4,9 @@
 #include <cstdint>
 #include <iostream>
 #include <sys/stat.h>
+#include <Eigen/Dense>
 
-#define debugDynamic false
+#define debugDynamic true
 #define debugAgent false
 
 struct position {
