@@ -172,32 +172,17 @@ void saveGrid(GridMatrix_pointer grid, int id)
 			(*mat)(i,j) = (*grid)(i,j).type;
 		}
 	}
-	Functions::save(mat, fn, dir);
+	Functions::saveMat(mat, fn, dir);
 }
 
 std::shared_ptr<MatrixXi> openGrid(int size, int id)
 {
-	std::shared_ptr<MatrixXi> grid = std::make_shared<MatrixXi>(size,size);
-	std::string fn = "grid/grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id) + ".bin";
-	if (!Functions::fileExists(fn)) {std::cout << "file does not exist: " + fn << '\n'; std::perror(fn.c_str());}
-	FILE *fs = fopen(fn.c_str(), "rb");
-	if(!fs)
-	{
-		std::cout << "File opening failed: ";
-		std::perror(fn.c_str());
-	}
-	uint rows, cols;
-	fread(&rows, sizeof(uint), 1, fs);
-	fread(&cols, sizeof(uint), 1, fs);
-	double d;
-	for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; ++j)
-		{
-			fread(&d, sizeof(double), 1, fs);
-			(*grid)(i,j) = (int) d;
-		}
-	}
-	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+	std::shared_ptr<MatrixXi> grid = std::make_shared<MatrixXi>(size, size);
+	std::shared_ptr<MatrixXd> grid_double = std::make_shared<MatrixXd>(size, size);
+	std::string dir = "grid";
+	std::string file = "grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id);
+	std::cout << "1";
+	if (!Functions::readMat(grid_double, file, dir)) exit(0);
+	(*grid) = (*grid_double).cast<int>();
 	return grid;
 }
