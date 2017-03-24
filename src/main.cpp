@@ -5,7 +5,9 @@
 
 int main(int argc, char* argv[])
 {
-	bool print_out = false;
+	// arg[1] -> env id
+	// arg[2] -> num_threads
+	bool print_out = true;
 	bool save_time = false;
 	int num_threads, cache, size, i, id;
 	std::chrono::steady_clock::time_point start, end;
@@ -31,7 +33,7 @@ int main(int argc, char* argv[])
 		{"alpha",			required_argument, 	0, 'a'	},
 		{"mse",				required_argument, 	0, 'm'	},
 		{"shared_mem",		required_argument, 	0, 's'	},
-		{"print_out",		required_argument, 	0, 'p'	},
+		{"no_print_out",	required_argument, 	0, 'p'	},
 		{"save_time",		required_argument, 	0, 't'	},
 		{0,					0,					0,	0	},
 	};
@@ -78,7 +80,7 @@ int main(int argc, char* argv[])
 				{
 					std::string str(optarg);
 					if (str[0] == 'T' || str[0] == 't')
-						print_out = true;
+						print_out = false;
 				}
 				break;
 			case 't':
