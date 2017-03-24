@@ -178,14 +178,14 @@ void Agent::saveQ(std::string fopt)
 	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>();
 	if (parallel) mat = global_q;
 	else mat = q_function;
-	Functions::save(mat, fn, dir);
+	Functions::saveMat(mat, fn, dir);
 }
 
 void Agent::saveEpVF(std::string fopt)
 {
 	std::string dir = "valfuncepisodes";
 	std::string fn = "size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
-	Functions::save(ep_value_function, fn, dir);
+	Functions::saveMat(ep_value_function, fn, dir);
 }
 
 std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)

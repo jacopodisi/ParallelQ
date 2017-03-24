@@ -148,9 +148,10 @@ int main(int argc, char* argv[])
     }
     */
 
-    Environment envi(14, 5);
-    envi.printGridEnv();
+    // Environment envi(14, 5);
+    // envi.printGridEnv();
     //std::cout << (*envi.readValueFunction());
 
-    //printGrid(gridGenerator(14, 60, true));
+    printGrid(gridGenerator(14, 60, true));
+    printGrid(openGrid(14, 0));
 }

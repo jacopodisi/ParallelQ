@@ -200,7 +200,7 @@ void Environment::saveValueFunction(std::shared_ptr<Eigen::VectorXd> value_funct
 	std::string fn = "value_function_grid_size" + std::to_string(gridsize) + "id" + std::to_string(id);
 	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>(value_function->rows(), 1);
 	mat->col(0) = value_function->col(0);
-	Functions::save(mat, fn, dir);
+	Functions::saveMat(mat, fn, dir);
 }
 
 std::shared_ptr<Eigen::VectorXd> Environment::readValueFunction()
