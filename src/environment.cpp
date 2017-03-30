@@ -200,33 +200,22 @@ void Environment::saveValueFunction(std::shared_ptr<Eigen::VectorXd> value_funct
 	std::string fn = "value_function_grid_size" + std::to_string(gridsize) + "id" + std::to_string(id);
 	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>(value_function->rows(), 1);
 	mat->col(0) = value_function->col(0);
-	Functions::saveMat(mat, fn, dir);
+	if (!Functions::saveMat(mat, fn, dir))
+		exit(0);
 }
 
 std::shared_ptr<Eigen::VectorXd> Environment::readValueFunction()
 {
-	std::cout << "1\n";
-	std::string fn = "grid/value_function_grid_size" + std::to_string(grid->rows()) + "id" + std::to_string(id) + ".bin";
-	if (!Functions::fileExists(fn)) 
-	{
-		std::cout << "Calculating Value function of grid " << id << '\n';
+	int gridsize = grid->rows();
+	std::string dir = "grid";
+	std::string fn = "value_function_grid_size" + std::to_string(gridsize) + "id" + std::to_string(id);
+	if (!Functions::fileExists("./" + dir + "/" + fn + ".bin")) 
 		Environment::saveValueFunction(Environment::valueIteration());
-	}
-	FILE *fs = fopen(fn.c_str(), "rb");
-	if(!fs)
-	{
-		std::cout << "File opening failed: ";
-		std::perror(fn.c_str());
-	}
-	uint rows, cols;
-	fread(&rows, sizeof(uint), 1, fs);
-	fread(&cols, sizeof(uint), 1, fs);
-    std::shared_ptr<Eigen::VectorXd> V = std::make_shared<Eigen::VectorXd>(rows);
-    for (std::size_t i = 0; i < rows; i++)
-	{
-		fread(&(*V)(i), sizeof(double), 1, fs);
-	}
-	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+    std::shared_ptr<Eigen::MatrixXd> V_mat = std::make_shared<Eigen::MatrixXd>();
+	if (!Functions::readMat(V_mat, fn, dir))
+		exit(0);
+	std::shared_ptr<Eigen::VectorXd> V = std::make_shared<Eigen::VectorXd>(V_mat->rows());
+	(*V) = V_mat->col(0);
 	return V;
 }
 
