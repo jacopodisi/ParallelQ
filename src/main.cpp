@@ -13,8 +13,13 @@ int main(int argc, char* argv[])
 	int num_threads, cache, size, i, id;
 	std::chrono::steady_clock::time_point start, end;
 	void * return_value;
-	if (argc < 2) { std::cout << "choose env: "; std::cin >> argv[1];}
+	if (argc < 2) { std::cout << "choose env or -1 to create a new grid: "; std::cin >> argv[1];}
 	id = atof(argv[1]);
+	if (id<0)
+	{
+		printGrid(gridGenerator(14, 60, true));
+		return 1;
+	}
 	Environment env (14, id);
 	if (argv[2] == NULL) { std::cout << "choose num_threads: "; std::cin >> argv[2];}
 	num_threads = atof(argv[2]);
