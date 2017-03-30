@@ -24,7 +24,7 @@ namespace Functions {
 	@param the matrix where to save, the name of the file and the direcotry where the
 	       file is saved
 	*/
-	int readMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filename, std::string directoryname);
+	int readMat(std::shared_ptr<Eigen::MatrixXd>& mat, std::string filename, std::string directoryname);
 
 } // Functions
 

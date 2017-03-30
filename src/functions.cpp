@@ -15,7 +15,6 @@ int Functions::saveMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filenam
 	std::string dirname = "./" + directoryname;
 	mkdir(dirname.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	std::string fn = dirname + "/" + filename + ".bin";
-	//std::string fn = "epepqfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + filename + ".bin";
 	std::string choice;
 	while (fileExists(fn)) 
 	{
@@ -42,7 +41,6 @@ int Functions::saveMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filenam
 	int cols = mat->cols();
 	std::fwrite(&rows, sizeof(int), 1, fs);
 	std::fwrite(&cols, sizeof(int), 1, fs);
-	std::cout << std::to_string(rows) + " " + std::to_string(rows) + "\n";
 	for (int i = 0; i < mat->rows(); ++i)
 	{
 		for (int j = 0; j < mat->cols(); j++)
@@ -63,7 +61,7 @@ int Functions::saveMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filenam
 	return 1;
 }
 
-int Functions::readMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filename, std::string directoryname)
+int Functions::readMat(std::shared_ptr<Eigen::MatrixXd>& mat, std::string filename, std::string directoryname)
 {
 	std::string dirname = "./" + directoryname;
 	std::string fn = dirname + "/" + filename + ".bin";
@@ -81,15 +79,12 @@ int Functions::readMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filenam
 	int rows, cols;
 	std::fread(&rows, sizeof(int), 1, fs);
 	std::fread(&cols, sizeof(int), 1, fs);
-	rows = 14;
-	cols = 14;
-	std::cout << std::to_string(rows) + " " + std::to_string(rows) + "\n";
-	std::shared_ptr<Eigen::MatrixXd> matrix = std::make_shared<Eigen::MatrixXd>(rows, cols);
+	mat = std::make_shared<Eigen::MatrixXd>(rows, cols);
 	for (int i = 0; i < rows; i++)
 	{
 		for (int j = 0; j < cols; ++j)
 		{
-			std::fread(&(*matrix)(i,j), sizeof(double), 1, fs);
+			std::fread(&(*mat)(i,j), sizeof(double), 1, fs);
 		}
 	}
 	if(std::fclose(fs) != 0)
@@ -97,6 +92,5 @@ int Functions::readMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filenam
 		std::cout << "Error in closing file" << '\n';
 		return 0;
 	}
-	mat = matrix;
 	return 1;
 }
