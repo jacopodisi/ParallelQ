@@ -1,10 +1,7 @@
-for (( i = 0; i < 30; i++ )) 
-do	
-	for ((np=1; np <= 8; np=np*2))
+for ((np=1; np <= 8; np=np*2))
+do
+    for ((id=0; id <= 4; id++))
 	do
-	    for ((id=0; id <= 4; id++))
-		do
-		    ./myprog.out $id $np --save_time=true
-		done
+	    ./myprog.out $id $np --save_stat
 	done
 done

@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <Eigen/Dense>
 
-#define debugDynamic true
+#define debugDynamic false
 #define debugAgent false
 
 struct position {
