@@ -169,7 +169,7 @@ void saveGrid(GridMatrix_pointer grid, int id)
 	{
 		for (int j = 0; j < mat->cols(); j++)
 		{
-			(*mat)(i,j) = (*grid)(i,j).type;
+			(*mat)(i,j) = (double) (*grid)(i,j).type;
 		}
 	}
 	Functions::saveMat(mat, fn, dir);
@@ -177,11 +177,10 @@ void saveGrid(GridMatrix_pointer grid, int id)
 
 std::shared_ptr<MatrixXi> openGrid(int size, int id)
 {
-	std::shared_ptr<MatrixXi> grid = std::make_shared<MatrixXi>(size, size);
-	std::shared_ptr<MatrixXd> grid_double = std::make_shared<MatrixXd>(size, size);
+	std::shared_ptr<MatrixXi> grid = std::make_shared<MatrixXi>();
+	std::shared_ptr<MatrixXd> grid_double = std::make_shared<MatrixXd>();
 	std::string dir = "grid";
 	std::string file = "grid_matrix_size" + std::to_string(size) + "id" + std::to_string(id);
-	std::cout << "1";
 	if (!Functions::readMat(grid_double, file, dir)) exit(0);
 	(*grid) = (*grid_double).cast<int>();
 	return grid;
