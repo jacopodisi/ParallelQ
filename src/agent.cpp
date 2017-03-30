@@ -162,6 +162,18 @@ void * Agent::learn(void * agent)
 	return (void *) &(*ag.q_function);
 }
 
+void Agent::computeSaveStatistics(std::string fopt)
+{
+	std::shared_ptr<Eigen::MatrixXd> med = std::make_shared<Eigen::MatrixXd>(ep_value_function->cols(), 1);
+	for (int ep = 0; ep < ep_value_function->cols(); ep++)
+	{
+		(*med)(ep, 0) = (value_function->col(0) - ep_value_function->col(ep)).sum() / ep_value_function->rows();
+	}
+	std::string dir = "statistics";
+	std::string fn = "grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
+	Functions::saveMat(med, fn, dir);
+}
+
 std::shared_ptr<Eigen::MatrixXd> Agent::getQ()
 {
 	return q_function;
@@ -174,7 +186,7 @@ std::shared_ptr<Eigen::MatrixXd> Agent::getGlobalQ()
 void Agent::saveQ(std::string fopt)
 {
 	std::string dir = "qfunc";
-	std::string fn = "gridsize" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
+	std::string fn = "grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
 	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>();
 	if (parallel) mat = global_q;
 	else mat = q_function;
@@ -190,31 +202,11 @@ void Agent::saveEpVF(std::string fopt)
 
 std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
 {
-	std::string fn = "qfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt + ".bin";	
-	while (!Functions::fileExists(fn))
-	{
-		std::cout << "file does not exist: " + fn << '\n';
-		std::cout << "Specify a new file name (size=" + std::to_string(env.getGrid()->rows()) + ", id=" + std::to_string(env.getId()) + "): ";
-		std::cin >> fopt;
-		std::string fn = "qfunc/grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt + ".bin";	
-	}
-	FILE *fs = fopen(fn.c_str(), "rb");
-	if(!fs)
-	{
-		std::cout << "File opening failed: ";
-		std::perror(fn.c_str());
-	}
-	uint rows, cols;
-	fread(&rows, sizeof(uint), 1, fs);
-	fread(&cols, sizeof(uint), 1, fs);
-	std::shared_ptr<Eigen::MatrixXd> Q = std::make_shared<Eigen::MatrixXd>(rows, cols);
-    std::fseek(fs, 0, SEEK_SET);
-	for (std::size_t i = 0; i < rows; i++)
-	{
-		for (int j = 0; j < cols; j++)
-			fread(&(*Q)(i,j), sizeof(double), 1, fs);
-	}
-
-	if(std::fclose(fs) != 0) std::cout << "Error in closing file" << '\n';
+	int gridsize = env.getGrid()->rows();
+	std::string dir = "qfunc";
+	std::string fn = "grid_size" + std::to_string(gridsize) + "id" + std::to_string(env.getId()) + fopt;
+	std::shared_ptr<Eigen::MatrixXd> Q = std::make_shared<Eigen::MatrixXd>();
+	if (!Functions::readMat(Q, fn, dir))
+		exit(0);
 	return Q;
 }

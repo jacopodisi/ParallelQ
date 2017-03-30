@@ -20,6 +20,7 @@ public:
 	Agent(Environment env, int init, int end, int param_cache_size, agent_options param_opt, bool save_ep_val = false);
 	int epsilonGreedyPolicy(int state, double epsilon);
 	static void * learn(void * agent);
+	void computeSaveStatistics(std::string fopt);
 	std::shared_ptr<Eigen::MatrixXd> getQ();
 	std::shared_ptr<Eigen::MatrixXd> getGlobalQ();
 	void saveQ(std::string fopt);
