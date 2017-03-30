@@ -95,6 +95,11 @@ public:
 	called value_function_list_size(size).bin
 	*/
 	void saveValueFunction(std::shared_ptr<Eigen::VectorXd> value_function);
+
+	/*
+	open the file containing the value function of the current environment.
+	if there is no value function, it compute it, save it in a file and read it.
+	*/
 	std::shared_ptr<Eigen::VectorXd> readValueFunction();
 	
 	/*
