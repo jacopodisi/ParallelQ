@@ -2,13 +2,14 @@
 #include <vector>
 #include <getopt.h>
 #include <sstream>
+#include "functions.h"
 
 int main(int argc, char* argv[])
 {
-	/*
 	srand(time(0));
 	bool print_out = false;
 	bool save_time = false;
+	bool save_stat = false;
 	int num_threads, cache, size, i, id;
 	std::chrono::steady_clock::time_point start, end;
 	void * return_value;
@@ -31,9 +32,10 @@ int main(int argc, char* argv[])
 		{"discount",		required_argument, 	0, 'd'	},
 		{"alpha",			required_argument, 	0, 'a'	},
 		{"mse",				required_argument, 	0, 'm'	},
-		{"shared_mem",		required_argument, 	0, 's'	},
-		{"print_out",		required_argument, 	0, 'p'	},
-		{"save_time",		required_argument, 	0, 't'	},
+		{"no_shared_mem",	no_argument, 	    0, 's'	},
+		{"print_out",		no_argument, 	    0, 'p'	},
+		{"save_time",		no_argument, 	    0, 't'	},
+		{"save_stat",		no_argument, 	    0, 'v'	}, //save valuefunction per episode
 		{0,					0,					0,	0	},
 	};
 	int index;
@@ -42,7 +44,7 @@ int main(int argc, char* argv[])
 	opterr = 1; 
 	while(iarg != -1)
 	{
-		iarg = getopt_long(argc, argv, "s:e:n:d:a:m:", longopts, &index);
+		iarg = getopt_long(argc, argv, "sptve:n:d:a:m:", longopts, &index);
 		switch (iarg)
 		{
 			case 'e':
@@ -67,28 +69,16 @@ int main(int argc, char* argv[])
 					opt.mse = atof(optarg);
 				break;
 			case 's':
-				if(optarg)
-				{
-					std::string str(optarg);
-					if (str[0] == 'F' || str[0] == 'f')
-						opt.shared_mem = false;
-				}
+				opt.shared_mem = false;
 				break;
 			case 'p':
-				if(optarg)
-				{
-					std::string str(optarg);
-					if (str[0] == 'T' || str[0] == 't')
-						print_out = true;
-				}
+				print_out = true;
 				break;
 			case 't':
-				if(optarg)
-				{
-					std::string str(optarg);
-					if (str[0] == 'T' || str[0] == 't')
-						save_time = true;
-				}
+				save_time = true;
+				break;
+			case 'v':
+				save_stat = true;
 				break;
 		}
 	}
@@ -102,14 +92,14 @@ int main(int argc, char* argv[])
 		case 8: cache = 2; break;
 	}
 	//instantiation of different agents
-	std::vector<Agent> agents_list(num_threads, Agent(env, opt));
+	std::vector<Agent> agents_list(num_threads, Agent(env, opt, save_stat));
 	for (i = 0; i < num_threads-1; i++)
 	{
-		agents_list[i] = *(new Agent(env, i*size + 1, i*size+size, cache, opt));
+		agents_list[i] = *(new Agent(env, i*size + 1, i*size+size, cache, opt, save_stat));
 	}
 	if (num_threads != 1)
 	{
-		agents_list[i] = *(new Agent(env, i*size + 1, env.getStatesList()->rows() - 1, cache, opt));
+		agents_list[i] = *(new Agent(env, i*size + 1, env.getStatesList()->rows() - 1, cache, opt, save_stat));
 	}
 	pthread_attr_t attr;
 	pthread_t threads[num_threads];
@@ -146,12 +136,8 @@ int main(int argc, char* argv[])
 		outfile.open(fn, std::ios_base::app);
 		outfile << interval << '\n';
     }
-    */
-
-    // Environment envi(14, 5);
-    // envi.printGridEnv();
-    //std::cout << (*envi.readValueFunction());
-
-    printGrid(gridGenerator(14, 60, true));
-    printGrid(openGrid(14, 0));
+    if (save_stat)
+    {
+    	agents_list[0].computeSaveStatistics("nt" + std::to_string(num_threads));
+    }
 }
