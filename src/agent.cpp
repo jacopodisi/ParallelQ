@@ -196,7 +196,7 @@ void Agent::saveQ(std::string fopt)
 void Agent::saveEpVF(std::string fopt)
 {
 	std::string dir = "valfuncepisodes";
-	std::string fn = "size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
+	std::string fn = "grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
 	Functions::saveMat(ep_value_function, fn, dir);
 }
 
