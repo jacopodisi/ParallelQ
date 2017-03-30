@@ -20,7 +20,7 @@ public:
 	/*
 	initialization of Environment
 	@param grid_size: size of the row of the grid
-		   grid_id:   index of the grid in the file
+	       grid_id:   index of the grid in the file
 	*/
 	Environment(int grid_size, int grid_id);
 
