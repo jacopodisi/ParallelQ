@@ -59,21 +59,27 @@ int Agent::epsilonGreedyPolicy(int state, double epsilon)
 {
 	std::shared_ptr<Eigen::VectorXd> policy = std::make_shared<Eigen::VectorXd>(num_actions);
 	(*policy).fill(epsilon / num_actions);
+	//if (debugAgent) std::cout << (*policy).transpose() << " ";
 	int max = 0;
 	for (int i = 1; i < num_actions; ++i)
 	{
 		if ((*q_function)(state, i) > (*q_function)(state, max))
 			max = i;
 	}
+	//if (debugAgent) std::cout << std::to_string(max) << " ";
 	(*policy)(max) += 1 - epsilon;
 	double val = ((double) rand() / RAND_MAX);
+	//if (debugAgent) std::cout << "val: " + std::to_string(val) + " ";
+	//if (debugAgent) std::cout << (*policy).transpose() << " ";
 	double prob = 0;
 	int action = 0;
 	for(int i = 0; i < num_actions; i++)
 	{
 		prob += (*policy)(i);
+		//if (debugAgent) std::cout << std::to_string(prob) + " ";
 		if (val < prob) {action = i; break;}
 	}
+	//if (debugAgent) std::cout << std::to_string(action) + " ";
 	return action;
 }
 
@@ -87,6 +93,7 @@ void * Agent::learn(void * agent)
 	for (int episode = 0; episode < ag.opt.num_ep; episode++)
 	{
 		//save current value function
+		if (debugAgent) std::cout << "episode " << episode << '\n';
 		if(ag.save_ep_val)
 		{
 			if (!ag.parallel) (*ep_value_function).col(episode) = ag.q_function->rowwise().maxCoeff();
@@ -103,6 +110,7 @@ void * Agent::learn(void * agent)
 		for (int i = 0; i < ag.opt.mse; ++i)
 		{
 		    observation ob = ag.env.step(static_cast<Actions>(action));
+			if (debugAgent) ag.env.printGridEnv();
 		    if (ag.parallel)
 		    {
 				int pos = ag.env.getCurrStateNumber();
@@ -125,6 +133,7 @@ void * Agent::learn(void * agent)
 			//second condition
 		    if (ob.done)
 		    {
+		    	if (debugAgent) std::cout << "\nWIN\n";
 		    	double delta = ob.reward - (*ag.q_function)(state, action);
 		    	(*ag.q_function)(state, action) += ag.opt.alpha * delta;
 		    	if(!ag.opt.shared_mem && ag.parallel)
@@ -157,7 +166,9 @@ void * Agent::learn(void * agent)
 		    if (outside) break;
 		    state = ob.next_state;
 		    action = next_action;
+		    if (debugAgent) std::cout << '\n';
 		}
+		if (debugAgent) std::cout << "\n --------------------------------------------------- \n" << (*ag.q_function) << "\n\n\n";
 	}
 	return (void *) &(*ag.q_function);
 }
