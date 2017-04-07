@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <Eigen/Dense>
+#include <memory>
 
 #define debugDynamic false
 #define debugAgent false
