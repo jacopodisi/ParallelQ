@@ -10,7 +10,9 @@ int main(int argc, char* argv[])
 	bool print_out = false;
 	bool save_time = false;
 	bool save_stat = false;
+	bool save_ep_val_func = false;
 	int num_threads, cache, size, i, id;
+	cache = 0;
 	std::chrono::steady_clock::time_point start, end;
 	void * return_value;
 	if (argc < 2) { std::cout << "choose env or -1 to create a new grid: "; std::cin >> argv[1];}
@@ -40,6 +42,7 @@ int main(int argc, char* argv[])
 		{"no_shared_mem",	no_argument, 	    0, 's'	},
 		{"print_out",		no_argument, 	    0, 'p'	},
 		{"save_time",		no_argument, 	    0, 't'	},
+		{"save_valep",		no_argument, 	    0, 'f'	},
 		{"save_stat",		no_argument, 	    0, 'v'	}, //save valuefunction per episode
 		{0,					0,					0,	0	},
 	};
@@ -49,13 +52,12 @@ int main(int argc, char* argv[])
 	opterr = 1; 
 	while(iarg != -1)
 	{
-		iarg = getopt_long(argc, argv, "sptve:n:d:a:m:", longopts, &index);
+		iarg = getopt_long(argc, argv, "fsptve:n:d:a:m:", longopts, &index);
 		switch (iarg)
 		{
 			case 'e':
 				if(optarg)
 					opt.eps = atof(optarg);
-					std::cout << "Your argument(s): " << optarg << std::endl;
 				break;
 			case 'n':
 				if(optarg)
@@ -84,6 +86,9 @@ int main(int argc, char* argv[])
 				break;
 			case 'v':
 				save_stat = true;
+				break;
+			case 'f':
+				save_ep_val_func = true;
 				break;
 		}
 	}
@@ -144,5 +149,9 @@ int main(int argc, char* argv[])
     if (save_stat)
     {
     	agents_list[0].computeSaveStatistics("nt" + std::to_string(num_threads));
+    }
+    if (save_ep_val_func)
+    {
+    	agents_list[0].saveEpVF("nt" + std::to_string(num_threads));
     }
 }
