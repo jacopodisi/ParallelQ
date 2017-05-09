@@ -32,3 +32,8 @@
 .clang_complete
 .sublimelinterrc
 .DS_Store
+
+#Folders
+times/
+valfuncepisodes/
+statistics/
