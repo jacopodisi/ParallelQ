@@ -1,3 +1,22 @@
+/***************************************************************************
+ *   Copyright (C) 2017 by Jacopo Di Simone                                *
+ *                                                                         *
+ *   This file is part of ParallelQ.                                      *
+ *                                                                         *
+ *   ParallelQ is free software; you can redistribute it and/or modify    *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   ParallelQ is distributed in the hope that it will be useful,         *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with ParallelQ; if not, see <http://www.gnu.org/licenses/>    *
+ ***************************************************************************/
+
 #include "functions.h"
 
 bool Functions::fileExists(const std::string& filename)
@@ -10,26 +29,34 @@ bool Functions::fileExists(const std::string& filename)
     return false;
 }
 
-int Functions::saveMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filename, std::string directoryname)
+int Functions::saveMat(std::shared_ptr<Eigen::MatrixXd> mat, std::string filename, std::string directoryname, bool incremental)
 {	
 	std::string dirname = "./" + directoryname;
 	mkdir(dirname.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	std::string fn = dirname + "/" + filename + ".bin";
 	std::string choice;
+	int i = 0;
 	while (fileExists(fn)) 
 	{
-		std::cout << "file " + fn + " already exist. Do you want to overwrite it?(y/n): ";
-		std::cin >> choice;
-		std::cout  << '\n';
-		while(choice != "y" && choice != "n")
+		if(incremental)
 		{
-			std::cout << "Invalid option (y/n): ";
+			fn = dirname + "/" + filename + "_" + std::to_string(i) + ".bin";
+			i++;
+		} else
+		{
+			std::cout << "file " + fn + " already exist. Do you want to overwrite it?(y/n): ";
 			std::cin >> choice;
+			std::cout  << '\n';
+			while(choice != "y" && choice != "n")
+			{
+				std::cout << "Invalid option (y/n): ";
+				std::cin >> choice;
+			}
+			if (choice == "y") break;
+			else std::cout << "specify a new file name: " + dirname + "/";
+			std::cin >> filename;
+			fn = dirname + "/" + filename + ".bin";
 		}
-		if (choice == "y") break;
-		else std::cout << "specify a new file name: " + dirname + "/";
-		std::cin >> filename;
-		fn = dirname + "/" + filename + ".bin";
 	}
 	FILE *fs = fopen(fn.c_str(), "wb");
 	if(!fs)

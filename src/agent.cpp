@@ -1,3 +1,22 @@
+/***************************************************************************
+ *   Copyright (C) 2017 by Jacopo Di Simone                                *
+ *                                                                         *
+ *   This file is part of ParallelQ.                                      *
+ *                                                                         *
+ *   ParallelQ is free software; you can redistribute it and/or modify    *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 3 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   ParallelQ is distributed in the hope that it will be useful,         *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with ParallelQ; if not, see <http://www.gnu.org/licenses/>    *
+ ***************************************************************************/
+
 #include "agent.h"
 #include "functions.h"
 
@@ -5,9 +24,9 @@ std::shared_ptr<Eigen::MatrixXd> Agent::global_q = std::make_shared<Eigen::Matri
 std::shared_ptr<Eigen::MatrixXd> Agent::ep_value_function = std::make_shared<Eigen::MatrixXd>();
 int Agent::num_agents = 0;
 
-Agent::Agent(Environment param_env, agent_options param_opt, bool param_save_ep_val)
+Agent::Agent(Environment param_env, agent_options param_opt, bool param_compute_ep_val)
 {
-	save_ep_val = param_save_ep_val;
+	compute_ep_val = param_compute_ep_val;
 	leader_agent = false;
 	parallel = false;
 	env = param_env;
@@ -26,9 +45,9 @@ Agent::Agent(Environment param_env, agent_options param_opt, bool param_save_ep_
 	ep_value_function->setZero(value_function->rows(), opt.num_ep);
 }
 
-Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, agent_options param_opt, bool param_save_ep_val)
+Agent::Agent(Environment param_env, int param_init, int param_end, int param_cache_size, agent_options param_opt, bool param_compute_ep_val)
 {
-	save_ep_val = param_save_ep_val;
+	compute_ep_val = param_compute_ep_val;
 	leader_agent = false;
 	parallel = true;
 	env = param_env;
@@ -94,7 +113,7 @@ void * Agent::learn(void * agent)
 	{
 		//save current value function
 		if (debugAgent) std::cout << "episode " << episode << '\n';
-		if(ag.save_ep_val)
+		if(ag.compute_ep_val)
 		{
 			if (!ag.parallel) (*ep_value_function).col(episode) = ag.q_function->rowwise().maxCoeff();
 			else if (ag.leader_agent) (*ep_value_function).col(episode) = global_q->rowwise().maxCoeff();
@@ -143,11 +162,8 @@ void * Agent::learn(void * agent)
 			    		(*global_q).row(state) = (*ag.q_function).row(state);
 			    		start = std::chrono::steady_clock::now();
 			    	}
-			    } else 
-			    {
-
 			    }
-		    	break;
+			    break;
 		    }
 		    int next_action = ag.epsilonGreedyPolicy(ob.next_state, epsilon);
 			//improve the Q function for the current (state, action)
@@ -173,7 +189,7 @@ void * Agent::learn(void * agent)
 	return (void *) &(*ag.q_function);
 }
 
-void Agent::computeSaveStatistics(std::string fopt)
+void Agent::computeSaveStatistics(std::string fopt, bool incremental)
 {
 	std::shared_ptr<Eigen::MatrixXd> med = std::make_shared<Eigen::MatrixXd>(ep_value_function->cols(), 1);
 	for (int ep = 0; ep < ep_value_function->cols(); ep++)
@@ -182,7 +198,7 @@ void Agent::computeSaveStatistics(std::string fopt)
 	}
 	std::string dir = "statistics";
 	std::string fn = "grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
-	Functions::saveMat(med, fn, dir);
+	Functions::saveMat(med, fn, dir, incremental);
 }
 
 std::shared_ptr<Eigen::MatrixXd> Agent::getQ()
@@ -194,21 +210,21 @@ std::shared_ptr<Eigen::MatrixXd> Agent::getGlobalQ()
 	return global_q;
 }
 
-void Agent::saveQ(std::string fopt)
+void Agent::saveQ(std::string fopt, bool incremental)
 {
 	std::string dir = "qfunc";
 	std::string fn = "grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
 	std::shared_ptr<Eigen::MatrixXd> mat = std::make_shared<Eigen::MatrixXd>();
 	if (parallel) mat = global_q;
 	else mat = q_function;
-	Functions::saveMat(mat, fn, dir);
+	Functions::saveMat(mat, fn, dir, incremental);
 }
 
-void Agent::saveEpVF(std::string fopt)
+void Agent::saveEpVF(std::string fopt, bool incremental)
 {
 	std::string dir = "valfuncepisodes";
 	std::string fn = "grid_size" + std::to_string(env.getGrid()->rows()) + "id" + std::to_string(env.getId()) + fopt;
-	Functions::saveMat(ep_value_function, fn, dir);
+	Functions::saveMat(ep_value_function, fn, dir, incremental);
 }
 
 std::shared_ptr<Eigen::MatrixXd> Agent::readQ(std::string fopt)
