@@ -1,12 +1,12 @@
 # ParallelQ
 
-##Description
+## Description
 PrallalelQ implement a parallel version of the Reinforcement Learning algortihm Q-Learning using pthread and a shared memory concept.  
 The environment choose to test the algorithm is a grid, 14x14 with 60 wall and 2 goal. Each transition give a reward of 0, except when the agent reach one of the two goal. Here he will receive a reward of 100.  
 The already created grid, with their optimal value function is saved in the folder grid.  
 The file grid14List.rtf contains a list of the available grids.
 
-##How to build it
+## How to build it
 From the terminal use:  
 $ make
 
